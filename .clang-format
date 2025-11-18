@@ -1,0 +1,13 @@
+BasedOnStyle: LLVM
+AccessModifierOffset: -4
+IndentWidth: 4
+PointerAlignment: Left
+Cpp11BracedListStyle: false
+SpaceBeforeCpp11BracedList: true
+AlignArrayOfStructures: Left
+AllowShortBlocksOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
+BraceWrapping:
+  AfterControlStatement: Never
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+
