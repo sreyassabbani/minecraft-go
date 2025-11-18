@@ -1,47 +1,89 @@
 {
-  "version": 4,
-  "configurations": [
-    {
-      "name": "Arduino Due",
-      "compilerPath": "C:/Users/203421536/AppData/Local/Arduino15/packages/arduino/tools/arm-none-eabi-gcc/4.8.3-2014q1/bin/arm-none-eabi-g++.exe",
-      "compilerArgs": [
-        "-mcpu=cortex-m3",
-        "-mthumb",
-        "-std=gnu++11"
-      ],
-      "intelliSenseMode": "windows-gcc-arm",
-      "cStandard": "c11",
-      "cppStandard": "c++11",
-      "includePath": [
-        "${workspaceFolder}/**",
-        "C:/Users/203421536/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12/system/libsam",
-        "C:/Users/203421536/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12/system/CMSIS/CMSIS/Include",
-        "C:/Users/203421536/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12/system/CMSIS/Device/ATMEL",
-        "C:/Users/203421536/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12/cores/arduino",
-        "C:/Users/203421536/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12/variants/arduino_due_x"
-      ],
-      "defines": [
-        "F_CPU=84000000L",
-        "ARDUINO=10607",
-        "ARDUINO_SAM_DUE",
-        "ARDUINO_ARCH_SAM",
-        "__SAM3X8E__",
-        "USB_VID=0x2341",
-        "USB_PID=0x003e",
-        "USBCON",
-        "USB_MANUFACTURER=\\\"Arduino LLC\\\"",
-        "USB_PRODUCT=\\\"Arduino Due\\\"",
-        "_DEBUG",
-        "UNICODE",
-        "_UNICODE"
-      ],
-      "browse": {
-        "path": [
-          "${workspaceFolder}",
-          "C:/Users/203421536/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12"
-        ],
-        "limitSymbolsToIncludedHeaders": true
-      }
-    }
-  ]
+    "version": 4,
+    "configurations": [
+        {
+            "name": "Arduino Due (Windows)",
+            "compilerPath": "${env:USERPROFILE}/AppData/Local/Arduino15/packages/arduino/tools/arm-none-eabi-gcc/4.8.3-2014q1/bin/arm-none-eabi-g++.exe",
+            "compilerArgs": [
+                "-mcpu=cortex-m3",
+                "-mthumb",
+                "-std=gnu++11"
+            ],
+            "intelliSenseMode": "windows-gcc-arm",
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${env:USERPROFILE}/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12/system/libsam",
+                "${env:USERPROFILE}/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12/system/CMSIS/CMSIS/Include",
+                "${env:USERPROFILE}/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12/system/CMSIS/Device/ATMEL",
+                "${env:USERPROFILE}/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12/cores/arduino",
+                "${env:USERPROFILE}/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12/variants/arduino_due_x"
+            ],
+            "defines": [
+                "F_CPU=84000000L",
+                "ARDUINO=10607",
+                "ARDUINO_SAM_DUE",
+                "ARDUINO_ARCH_SAM",
+                "__SAM3X8E__",
+                "USB_VID=0x2341",
+                "USB_PID=0x003e",
+                "USBCON",
+                "USB_MANUFACTURER=\\\"Arduino LLC\\\"",
+                "USB_PRODUCT=\\\"Arduino Due\\\"",
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}",
+                    "${env:USERPROFILE}/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        },
+        {
+            "name": "Arduino Due (macOS)",
+            "compilerPath": "${env:HOME}/Library/Arduino15/packages/arduino/tools/arm-none-eabi-gcc/4.8.3-2014q1/bin/arm-none-eabi-g++",
+            "compilerArgs": [
+                "-mcpu=cortex-m3",
+                "-mthumb",
+                "-std=gnu++11"
+            ],
+            "intelliSenseMode": "macos-gcc-arm",
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${env:HOME}/Library/Arduino15/packages/arduino/hardware/sam/1.6.12/system/libsam",
+                "${env:HOME}/Library/Arduino15/packages/arduino/hardware/sam/1.6.12/system/CMSIS/CMSIS/Include",
+                "${env:HOME}/Library/Arduino15/packages/arduino/hardware/sam/1.6.12/system/CMSIS/Device/ATMEL",
+                "${env:HOME}/Library/Arduino15/packages/arduino/hardware/sam/1.6.12/cores/arduino",
+                "${env:HOME}/Library/Arduino15/packages/arduino/hardware/sam/1.6.12/variants/arduino_due_x"
+            ],
+            "defines": [
+                "F_CPU=84000000L",
+                "ARDUINO=10607",
+                "ARDUINO_SAM_DUE",
+                "ARDUINO_ARCH_SAM",
+                "__SAM3X8E__",
+                "USB_VID=0x2341",
+                "USB_PID=0x003e",
+                "USBCON",
+                "USB_MANUFACTURER=\\\"Arduino LLC\\\"",
+                "USB_PRODUCT=\\\"Arduino Due\\\"",
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}",
+                    "${env:HOME}/Library/Arduino15/packages/arduino/hardware/sam/1.6.12"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        }
+    ]
 }
