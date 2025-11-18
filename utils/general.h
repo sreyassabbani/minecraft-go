@@ -2,23 +2,23 @@
 #define GENERAL_H
 
 #ifdef ARDUINO
-#include <Arduino.h>
+  #include <Arduino.h>
+  #pragma message("Compiling Arduino Serial branch")
 #else
-#include <iostream>
+  #include <iostream>
+  #pragma message("Compiling host SerialShim branch")
 
-// minimal Serial shim for host builds
-struct SerialShim {
-    template <typename T> void print(const T& value) { std::cout << value; }
+  struct SerialShim {
+      template <typename T>
+      void print(const T& value) { std::cout << value; }
+      void println() { std::cout << std::endl; }
+  };
 
-    void println() { std::cout << std::endl; }
-};
+  inline SerialShim Serial;  // single ODR-safe definition in header
+#endif
 
-extern SerialShim Serial;
-#endif // ARDUINO
-
-template <typename T> void _println_impl(const T& value) {
-    Serial.print(value);
-}
+template <typename T>
+void _println_impl(const T& value) { Serial.print(value); }
 
 template <typename T, typename... Args>
 void _println_impl(const T& value, const Args&... args) {
@@ -26,7 +26,8 @@ void _println_impl(const T& value, const Args&... args) {
     _println_impl(args...);
 }
 
-template <typename... Args> void println(const Args&... args) {
+template <typename... Args>
+void println(const Args&... args) {
     _println_impl(args...);
     Serial.println();
 }

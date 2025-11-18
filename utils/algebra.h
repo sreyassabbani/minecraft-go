@@ -18,30 +18,35 @@ public:
 
     // copy constructor (takes a ref to an object of the same class as its
     // argument)
-    Vector(const array<T, LENGTH>& v) : data(v) {}
+    explicit Vector(const array<T, LENGTH>& v) : data(v) {}
     // Vector(const Vector<T, LENGTH>& other) : data(other.data) {}
+
+    
+    Vector(const Vector&) = default;
+    Vector& operator=(const Vector&) = default;
 
     // move constructor (takes a ref to an existing object, an rvalue ref, from
     // whom ownership of resources is transferred). after the function call,
     // `other.data` will reach a valid but unspecified state; that state is
     // typically empty, which is correctly handled by `std::move`
-    Vector(Vector<T, LENGTH>&& other) noexcept : data(std::move(other.data)) {}
+    Vector(Vector&& other) noexcept : data(std::move(other.data)) {}
 
     // `const` and/or `noexcept` and/or `constexpr` and/or `static`?? also aren't some of these inferred by the compiler
-    static constexpr size_t size() const { return LENGTH; }
+    static constexpr size_t size() noexcept { return LENGTH; }
+    
+    // operator[]: non-const and const overloads
+    T& operator[](size_t idx) {
+        assert(idx < data.size());
+        return data[idx];
+    }
 
     const T& operator[](size_t idx) const {
         assert(idx < data.size());
         return data[idx];
     }
 
-    T& operator[](size_t idx) const {
-        assert(idx < data.size());
-        return data[idx];
-    }
-
     // move assignment operator
-    Vector& operator=(Vector<T>&& other) noexcept {
+    Vector& operator=(Vector&& other) noexcept {
         // guard against self-move assignment
         if (this != &other) { data = std::move(other.data); }
         return *this;
