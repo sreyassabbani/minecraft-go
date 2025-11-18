@@ -3,7 +3,7 @@ CXXFLAGS ?= -std=c++17 -Wall -Wextra -pedantic -I.
 
 # Host harness ---------------------------------------------------------------
 HOST_BIN := host/host_test
-HOST_SRC := host/main.cpp utils/general.cpp utils/algebra.cpp
+HOST_SRC := host/main.cpp utils/algebra.cpp
 
 # Microcontroller build/upload ----------------------------------------------
 ARDUINO_CLI ?= arduino-cli
