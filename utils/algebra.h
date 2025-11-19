@@ -22,6 +22,12 @@ public:
     explicit Vector(const array<float, LENGTH>& v) : data(v) {}
     // Vector(const Vector<LENGTH>& other) : data(other.data) {}
 
+    explicit Vector(std::initializer_list<float> ilist) {
+        assert(ilist.size() == LENGTH);
+        size_t i = 0;
+        for (float x : ilist) data[i++] = x;
+    }
+
     Vector(const Vector&) = default;
     Vector& operator=(const Vector&) = default;
 
@@ -76,7 +82,7 @@ public:
         return res;
     }
 
-    float dot(Vector& other) const {
+    float dot(const Vector& other) const {
         float res = 0;
 
         for (size_t i = 0; i < other.length(); ++i) {
