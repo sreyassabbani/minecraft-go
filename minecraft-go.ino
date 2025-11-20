@@ -1,7 +1,10 @@
 #include <Arduino.h>
-// #include "utils/general.h"
-// #include "utils/algebra.h"
-// using namespace algebra;
+#include "utils/general.h"
+#include "utils/algebra.h"
+#include "utils/gyro.h"
+
+using namespace algebra;
+
 
 // const int L = 10;
 // bool blocks[L * L * L];
@@ -22,6 +25,13 @@ void setup() {
 
   Serial.begin(9600);
   Serial.print("HI");
+  Gyro gyro;
+
+  gyro.begin();
+
+  auto v = gyro.get_position();
+
+  println(v[0], v[1], v[2]);
 
 
   // println("Size check: ", c.length());

@@ -1,107 +1,237 @@
 #include "gyro.h"
 
+#include <Arduino.h>
 #include <Wire.h>
 #include <MPU6050.h>
 #include "../utils/general.h"
+#include "../utils/algebra.h"
 
 using algebra::Vector;
 
-void checkSettings()
+struct Quaternion { float w, x, y, z; };
+
+// Rotate a 3D vector by quaternion: v_world = q ⊗ v_body ⊗ q*
+static Vector<3> quatRotate(const Quaternion& q, const Vector<3>& v)
 {
-  Serial.println();
-  
-  Serial.print(" * Sleep Mode:                ");
-  Serial.println(mpu.getSleepEnabled() ? "Enabled" : "Disabled");
-
-  Serial.print(" * Motion Interrupt:     ");
-  Serial.println(mpu.getIntMotionEnabled() ? "Enabled" : "Disabled");
-
-  Serial.print(" * Zero Motion Interrupt:     ");
-  Serial.println(mpu.getIntZeroMotionEnabled() ? "Enabled" : "Disabled");
-
-  Serial.print(" * Free Fall Interrupt:       ");
-  Serial.println(mpu.getIntFreeFallEnabled() ? "Enabled" : "Disabled");
-  
-  Serial.print(" * Motion Threshold:          ");
-  Serial.println(mpu.getMotionDetectionThreshold());
-
-  Serial.print(" * Motion Duration:           ");
-  Serial.println(mpu.getMotionDetectionDuration());
-
-  Serial.print(" * Zero Motion Threshold:     ");
-  Serial.println(mpu.getZeroMotionDetectionThreshold());
-
-  Serial.print(" * Zero Motion Duration:      ");
-  Serial.println(mpu.getZeroMotionDetectionDuration());
-  
-  Serial.print(" * Clock Source:              ");
-  switch (mpu.getClockSource()) {
-    case MPU6050_CLOCK_KEEP_RESET:     Serial.println("Stops the clock and keeps the timing generator in reset"); break;
-    case MPU6050_CLOCK_EXTERNAL_19MHZ: Serial.println("PLL with external 19.2MHz reference"); break;
-    case MPU6050_CLOCK_EXTERNAL_32KHZ: Serial.println("PLL with external 32.768kHz reference"); break;
-    case MPU6050_CLOCK_PLL_ZGYRO:      Serial.println("PLL with Z axis gyroscope reference"); break;
-    case MPU6050_CLOCK_PLL_YGYRO:      Serial.println("PLL with Y axis gyroscope reference"); break;
-    case MPU6050_CLOCK_PLL_XGYRO:      Serial.println("PLL with X axis gyroscope reference"); break;
-    case MPU6050_CLOCK_INTERNAL_8MHZ:  Serial.println("Internal 8MHz oscillator"); break;
-  }
-  
-  Serial.print(" * Accelerometer:             ");
-  switch (mpu.getRange())
-  {
-    case MPU6050_RANGE_16G:            Serial.println("+/- 16 g"); break;
-    case MPU6050_RANGE_8G:             Serial.println("+/- 8 g"); break;
-    case MPU6050_RANGE_4G:             Serial.println("+/- 4 g"); break;
-    case MPU6050_RANGE_2G:             Serial.println("+/- 2 g"); break;
-  }  
-
-  Serial.print(" * Accelerometer offsets:     ");
-  Serial.print(mpu.getAccelOffsetX());
-  Serial.print(" / ");
-  Serial.print(mpu.getAccelOffsetY());
-  Serial.print(" / ");
-  Serial.println(mpu.getAccelOffsetZ());
-
-  Serial.print(" * Accelerometer power delay: ");
-  switch(mpu.getAccelPowerOnDelay())
-  {
-    case MPU6050_DELAY_3MS:            Serial.println("3ms"); break;
-    case MPU6050_DELAY_2MS:            Serial.println("2ms"); break;
-    case MPU6050_DELAY_1MS:            Serial.println("1ms"); break;
-    case MPU6050_NO_DELAY:             Serial.println("0ms"); break;
-  }  
-  
-  Serial.println();
+    // Hamilton product q * v (as pure quaternion)
+    float qw = q.w, qx = q.x, qy = q.y, qz = q.z;
+    // q ⊗ v
+    float rw = - qx*v[0] - qy*v[1] - qz*v[2];
+    float rx =   qw*v[0] + qy*v[2] - qz*v[1];
+    float ry =   qw*v[1] + qz*v[0] - qx*v[2];
+    float rz =   qw*v[2] + qx*v[1] - qy*v[0];
+    // (q ⊗ v) ⊗ q*
+    return Vector<3>{
+        -rw*qx + rx*qw - ry*qz + rz*qy,
+        -rw*qy + ry*qw - rz*qx + rx*qz,
+        -rw*qz + rz*qw - rx*qy + ry*qx
+    };
 }
 
-class Gyro {
-    MPU6050 gyro;
-public:
-    Gyro() : gyro() {
-        
-    }
+// Convert quaternion to yaw/pitch/roll (Z-Y-X) in radians
+static Vector<3> quatToEuler(const Quaternion& q)
+{
+    float qw = q.w, qx = q.x, qy = q.y, qz = q.z;
 
-    void begin() {
-        while (!mpu.begin(MPU6050_SCALE_2000DPS, MPU6050_RANGE_16G)) {
-            Serial.println("Could not find a valid MPU6050 sensor, check wiring!");
-            delay(500);
+    // Roll (X)
+    float sinr_cosp = 2.0f * (qw*qx + qy*qz);
+    float cosr_cosp = 1.0f - 2.0f * (qx*qx + qy*qy);
+    float roll = atan2f(sinr_cosp, cosr_cosp);
+
+    // Pitch (Y)
+    float sinp = 2.0f * (qw*qy - qz*qx);
+    if (fabsf(sinp) >= 1.0f) {
+        // use 90 degrees if out of range
+        float pitch = copysignf(M_PI / 2.0f, sinp);
+        // Yaw (Z)
+        float siny_cosp = 2.0f * (qw*qz + qx*qy);
+        float cosy_cosp = 1.0f - 2.0f * (qy*qy + qz*qz);
+        float yaw = atan2f(siny_cosp, cosy_cosp);
+        return Vector<3>{ yaw, pitch, roll };
+    }
+    float pitch = asinf(sinp);
+
+    // Yaw (Z)
+    float siny_cosp = 2.0f * (qw*qz + qx*qy);
+    float cosy_cosp = 1.0f - 2.0f * (qy*qy + qz*qz);
+    float yaw = atan2f(siny_cosp, cosy_cosp);
+
+    return Vector<3>{ yaw, pitch, roll };
+}
+
+void Gyro::mahonyUpdate(float gx_rad, float gy_rad, float gz_rad,
+                      float ax, float ay, float az, float dt)
+    {
+        // Normalize accelerometer (if valid)
+        float norm = sqrtf(ax*ax + ay*ay + az*az);
+        if (norm > 1e-6f) { ax /= norm; ay /= norm; az /= norm; }
+        else { ax = ay = az = 0.0f; }
+
+        // Estimated gravity direction from current quaternion (body frame)
+        float qw = q.w, qx = q.x, qy = q.y, qz = q.z;
+        float vx = 2.0f * (qx*qz - qw*qy);
+        float vy = 2.0f * (qw*qx + qy*qz);
+        float vz = qw*qw - qx*qx - qy*qy + qz*qz;
+
+        // Error is cross product between measured and estimated gravity
+        float ex = (ay * vz - az * vy);
+        float ey = (az * vx - ax * vz);
+        float ez = (ax * vy - ay * vx);
+
+        // Apply integral feedback (bias estimation)
+        if (twoKi > 0.0f) {
+            integralFB[0] += twoKi * ex * dt;
+            integralFB[1] += twoKi * ey * dt;
+            integralFB[2] += twoKi * ez * dt;
+        } else {
+            integralFB = Vector<3>{0.0f, 0.0f, 0.0f};
         }
-        
-        mpu.setAccelPowerOnDelay(MPU6050_DELAY_3MS);
-        mpu.setIntFreeFallEnabled(false);  
-        mpu.setIntZeroMotionEnabled(false);
-        mpu.setIntMotionEnabled(false);
-        mpu.setDHPFMode(MPU6050_DHPF_5HZ);
-        mpu.setMotionDetectionThreshold(2);
-        mpu.setMotionDetectionDuration(5);
-        mpu.setZeroMotionDetectionThreshold(4);
-        mpu.setZeroMotionDetectionDuration(2);	
-        
-        checkSettings();
+
+        // Apply proportional feedback + integral term to gyro
+        gx_rad += twoKp * ex + integralFB[0];
+        gy_rad += twoKp * ey + integralFB[1];
+        gz_rad += twoKp * ez + integralFB[2];
+
+        // Integrate quaternion rate: q̇ = 0.5 * q ⊗ ω
+        float qw_dot = 0.5f * ( -qx*gx_rad - qy*gy_rad - qz*gz_rad );
+        float qx_dot = 0.5f * (  qw*gx_rad + qy*gz_rad - qz*gy_rad );
+        float qy_dot = 0.5f * (  qw*gy_rad + qz*gx_rad - qx*gz_rad );
+        float qz_dot = 0.5f * (  qw*gz_rad + qx*gy_rad - qy*gx_rad );
+
+        qw += qw_dot * dt;
+        qx += qx_dot * dt;
+        qy += qy_dot * dt;
+        qz += qz_dot * dt;
+
+        // Normalize quaternion
+        float qnorm = sqrtf(qw*qw + qx*qx + qy*qy + qz*qz);
+        if (qnorm > 1e-6f) {
+            q.w = qw / qnorm;
+            q.x = qx / qnorm;
+            q.y = qy / qnorm;
+            q.z = qz / qnorm;
+        }
     }
 
-    Vector<3> read() {
-        auto rawAccel = mpu.readRawAccel();
+    Gyro::Gyro() : mpu() {}
 
-        return {rawAccel.XAxis, rawAccel.YAxis, rawAccel.ZAxis};
+    void Gyro::begin() {
+        Wire.begin();
+        mpu.initialize();
+        Serial.println(F("Testing MPU6050 connection..."));
+        if (!mpu.testConnection()) {
+            Serial.println(F("MPU6050 connection failed"));
+        } else {
+            Serial.println(F("MPU6050 connection successful"));
+        }
+
+        // Configure full-scale ranges (optional; adjust scales accordingly)
+        // Jeff Rowberg library enums:
+        //   Accel: MPU6050_ACCEL_FS_2/4/8/16
+        //   Gyro : MPU6050_GYRO_FS_250/500/1000/2000
+        mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_2);
+        accelLsbPerG = 16384.0f; // ±2g
+
+        mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_2000);
+        gyroLsbPerDPS = 16.4f;   // ±2000 °/s
+
+        // Optional: low-pass filter / sample rate (tune if needed)
+        // mpu.setDLPFMode(MPU6050_DLPF_BW_20);
+        // mpu.setRate(4); // sample divider
+
+        // Simple gyro bias estimate: average at rest (0.5 s)
+        Vector<3> gb{0,0,0};
+        const int N = 500;
+        for (int i = 0; i < N; ++i) {
+            int16_t ax, ay, az, gx, gy, gz;
+            mpu.getMotion6(&ax,&ay,&az,&gx,&gy,&gz);
+            gb[0] += (gx / gyroLsbPerDPS) * (M_PI/180.0f);
+            gb[1] += (gy / gyroLsbPerDPS) * (M_PI/180.0f);
+            gb[2] += (gz / gyroLsbPerDPS) * (M_PI/180.0f);
+            delay(1);
+        }
+        gyroBias = Vector<3>{ gb[0]/N, gb[1]/N, gb[2]/N };
+
+        lastMicros = micros();
     }
-}
+
+    // Step the filter and integrators; return world-frame linear acceleration (m/s^2)
+    Vector<3> Gyro::read() {
+        // Δt
+        unsigned long now = micros();
+        float dt = (now - lastMicros) * 1e-6f;
+        if (dt <= 0.0f || dt > 0.1f) dt = 0.001f; // guard
+        lastMicros = now;
+
+        // Read raw sensors
+        int16_t ax_raw, ay_raw, az_raw, gx_raw, gy_raw, gz_raw;
+        mpu.getMotion6(&ax_raw,&ay_raw,&az_raw,&gx_raw,&gy_raw,&gz_raw);
+
+        // Convert to physical units
+        Vector<3> a_body_mps2{
+            (ax_raw / accelLsbPerG) * G0,
+            (ay_raw / accelLsbPerG) * G0,
+            (az_raw / accelLsbPerG) * G0
+        };
+        Vector<3> g_body_rads{
+            (gx_raw / gyroLsbPerDPS) * ((float)M_PI/180.0f) - gyroBias[0],
+            (gy_raw / gyroLsbPerDPS) * ((float)M_PI/180.0f) - gyroBias[1],
+            (gz_raw / gyroLsbPerDPS) * ((float)M_PI/180.0f) - gyroBias[2]
+        };
+
+        // Mahony update (uses accel normalized to 1g)
+        float ax_n = ax_raw / accelLsbPerG;
+        float ay_n = ay_raw / accelLsbPerG;
+        float az_n = az_raw / accelLsbPerG;
+        mahonyUpdate(g_body_rads[0], g_body_rads[1], g_body_rads[2],
+                     ax_n, ay_n, az_n, dt);
+
+        // Rotate body accel to world frame, then subtract gravity [0,0,G0]
+        Vector<3> a_world_mps2 = quatRotate(q, a_body_mps2);
+        Vector<3> a_linear_world{ a_world_mps2[0],
+                                  a_world_mps2[1],
+                                  a_world_mps2[2] - G0 };
+
+        // Integrate velocity and position (very sensitive to drift!)
+        // ZUPT: if nearly still, snap velocity to zero
+        float accelMag_g = sqrtf(ax_n*ax_n + ay_n*ay_n + az_n*az_n);
+        float gyroMag_dps = sqrtf(
+            powf(gx_raw/gyroLsbPerDPS,2) +
+            powf(gy_raw/gyroLsbPerDPS,2) +
+            powf(gz_raw/gyroLsbPerDPS,2)
+        );
+        bool isStill = (fabsf(accelMag_g - 1.0f) < stillAccelThresh_g) &&
+                       (gyroMag_dps < stillGyroThresh_dps);
+
+        if (isStill) {
+            velocity = Vector<3>{0.0f, 0.0f, 0.0f};
+        } else {
+            velocity = Vector<3>{
+                velocity[0] + a_linear_world[0] * dt,
+                velocity[1] + a_linear_world[1] * dt,
+                velocity[2] + a_linear_world[2] * dt
+            };
+            // mild damping to limit drift growth
+            velocity = Vector<3>{ velocity[0]*velDamping,
+                                  velocity[1]*velDamping,
+                                  velocity[2]*velDamping };
+        }
+
+        position = Vector<3>{
+            position[0] + velocity[0] * dt,
+            position[1] + velocity[1] * dt,
+            position[2] + velocity[2] * dt
+        };
+
+        return a_linear_world; // world-frame linear acceleration (m/s^2)
+    }
+
+    // Orientation as yaw/pitch/roll (radians)
+    Vector<3> Gyro::read_orientation() {
+        return quatToEuler(q);
+    }
+
+    // Accessors for "absolute" position (world frame; starts at origin)
+    Vector<3> Gyro::get_position() const { return position; }
+    Vector<3> Gyro::get_velocity() const { return velocity; }
+
