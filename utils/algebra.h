@@ -1,9 +1,10 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-#include "general.h"
 #include <array>
 #include <cassert>
+#include <cstddef>
+#include <initializer_list>
 #include <utility>
 
 using std::array;
@@ -14,13 +15,8 @@ template <size_t LENGTH> class Vector {
     array<float, LENGTH> data;
 
 public:
-    // not marked `explicit` (`implicit` should have been an opt-in feature)
-    // Vector(array<float, LENGTH> v) : data(v) {}
-
-    // copy constructor (takes a ref to an object of the same class as its
-    // argument)
+    Vector() : data {} {}
     explicit Vector(const array<float, LENGTH>& v) : data(v) {}
-    // Vector(const Vector<LENGTH>& other) : data(other.data) {}
 
     explicit Vector(std::initializer_list<float> ilist) {
         assert(ilist.size() == LENGTH);
@@ -31,17 +27,10 @@ public:
     Vector(const Vector&) = default;
     Vector& operator=(const Vector&) = default;
 
-    // move constructor (takes a ref to an existing object, an rvalue ref, from
-    // whom ownership of resources is transferred). after the function call,
-    // `other.data` will reach a valid but unspecified state; that state is
-    // typically empty, which is correctly handled by `std::move`
     Vector(Vector&& other) noexcept : data(std::move(other.data)) {}
 
-    // `const` and/or `noexcept` and/or `constexpr` and/or `static`?? also
-    // aren't some of these inferred by the compiler
     static constexpr size_t length() noexcept { return LENGTH; }
 
-    // operator[]: non-const and const overloads
     float& operator[](size_t idx) {
         assert(idx < data.size());
         return data[idx];
@@ -52,20 +41,15 @@ public:
         return data[idx];
     }
 
-    // move assignment operator
     Vector& operator=(Vector&& other) noexcept {
-        // guard against self-move assignment
         if (this != &other) { data = std::move(other.data); }
         return *this;
     }
 
     Vector operator+(const Vector& other) const {
-        // same as `assert(this->data.size() == other.size())` and even
-        // `assert(data.size() == other.size())`
         assert(this->length() == other.length());
 
-        // copy construction of the result
-        Vector res = *this; // call the copy constructor!
+        Vector res = *this;
         for (size_t i = 0; i < res.data.size(); ++i) {
             res.data[i] += other.data[i];
         }
@@ -107,8 +91,6 @@ public:
     Matrix<ROWS, OCOLS> operator*(Matrix<COLS, OCOLS> const& rhs) const {
         Matrix<ROWS, OCOLS> res {};
 
-        println(res);
-
         for (size_t i = 0; i < ROWS; ++i) {
             for (size_t j = 0; j < OCOLS; ++j) {
                 float sum = 0.0f;
@@ -122,6 +104,14 @@ public:
         return res;
     }
 };
+
+struct Quaternion {
+    float w, x, y, z;
+};
+
+Vector<3> rotateVector(const Quaternion& q, const Vector<3>& v);
+Vector<3> quaternionToEuler(const Quaternion& q);
+Quaternion normalizeQuaternion(const Quaternion& q);
 
 } // namespace algebra
 

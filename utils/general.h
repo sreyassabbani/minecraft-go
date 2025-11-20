@@ -3,10 +3,8 @@
 
 #ifdef ARDUINO
   #include <Arduino.h>
-  #pragma message("Compiling Arduino Serial branch")
 #else
   #include <iostream>
-  #pragma message("Compiling host SerialShim branch")
 
   struct SerialShim {
       template <typename T>
