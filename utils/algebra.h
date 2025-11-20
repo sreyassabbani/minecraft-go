@@ -107,7 +107,7 @@ public:
     Matrix<ROWS, OCOLS> operator*(Matrix<COLS, OCOLS> const& rhs) const {
         Matrix<ROWS, OCOLS> res {};
 
-        println(res);
+        // println(res);
 
         for (size_t i = 0; i < ROWS; ++i) {
             for (size_t j = 0; j < OCOLS; ++j) {
@@ -121,6 +121,11 @@ public:
 
         return res;
     }
+};
+
+
+struct Quaternion {
+    float w, x, y, z;
 };
 
 } // namespace algebra

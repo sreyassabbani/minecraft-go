@@ -31,5 +31,6 @@
         "type_traits": "cpp",
         "utility": "cpp",
         "typeinfo": "cpp"
-    }
+    },
+    "editor.tabSize": 4
 }

@@ -3,6 +3,7 @@
     "configurations": [
         {
             "name": "Arduino Due (Windows)",
+            "envFile": "",
             "compilerPath": "${env:USERPROFILE}/AppData/Local/Arduino15/packages/arduino/tools/arm-none-eabi-gcc/4.8.3-2014q1/bin/arm-none-eabi-g++.exe",
             "compilerArgs": [
                 "-mcpu=cortex-m3",
@@ -18,7 +19,9 @@
                 "${env:USERPROFILE}/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12/system/CMSIS/CMSIS/Include",
                 "${env:USERPROFILE}/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12/system/CMSIS/Device/ATMEL",
                 "${env:USERPROFILE}/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12/cores/arduino",
-                "${env:USERPROFILE}/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12/variants/arduino_due_x"
+                "${env:USERPROFILE}/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12/variants/arduino_due_x",
+                "${env:USERPROFILE}/AppData/Local/Arduino15/packages/arduino/hardware/sam/1.6.12/libraries/Wire/src",
+                "${env:SKETCHBOOK_LOCATION}/libraries/MPU6050/src"
             ],
             "defines": [
                 "F_CPU=84000000L",
@@ -60,7 +63,9 @@
                 "${env:HOME}/Library/Arduino15/packages/arduino/hardware/sam/1.6.12/system/CMSIS/CMSIS/Include",
                 "${env:HOME}/Library/Arduino15/packages/arduino/hardware/sam/1.6.12/system/CMSIS/Device/ATMEL",
                 "${env:HOME}/Library/Arduino15/packages/arduino/hardware/sam/1.6.12/cores/arduino",
-                "${env:HOME}/Library/Arduino15/packages/arduino/hardware/sam/1.6.12/variants/arduino_due_x"
+                "${env:HOME}/Library/Arduino15/packages/arduino/hardware/sam/1.6.12/variants/arduino_due_x",
+                "${env:SKETCHBOOK_LOCATION}/libraries/MPU6050/src",
+                "${env:HOME}/Library/Arduino15/packages/arduino/hardware/sam/1.6.12/libraries/Wire/src"
             ],
             "defines": [
                 "F_CPU=84000000L",
