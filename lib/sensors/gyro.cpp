@@ -9,13 +9,27 @@
 
 namespace {
 constexpr float kDegToRad = 0.01745329251994329577f;
+
+inline algebra::Vector<3> rotateToWorld(const algebra::Quaternion& q,
+                                        const algebra::Vector<3>& v_body) {
+    return algebra::rotateVector(q, v_body);
 }
+
+inline void integrateEuler(algebra::Vector<3>& state,
+                           const algebra::Vector<3>& deriv, float dt) {
+    state[0] += deriv[0] * dt;
+    state[1] += deriv[1] * dt;
+    state[2] += deriv[2] * dt;
+}
+} // namespace
 
 Gyro::Gyro() = default;
 
 void Gyro::begin() {
     Wire.begin();
     require(mpu.begin(), "Failed to find MPU6050 chip", "MPU6050 Found!");
+
+    // set range for accelerometer
     mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
     Serial.print("Accelerometer range set to: ");
     switch (mpu.getAccelerometerRange()) {
@@ -32,6 +46,8 @@ void Gyro::begin() {
         println("+-16G");
         break;
     }
+
+    // set range for gyroscope
     mpu.setGyroRange(MPU6050_RANGE_500_DEG);
     Serial.print("Gyro range set to: ");
     switch (mpu.getGyroRange()) {
@@ -49,6 +65,7 @@ void Gyro::begin() {
         break;
     }
 
+    // set low-pass filter bandwidth (cut high-frequency noise before reading)
     mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
     Serial.print("Filter bandwidth set to: ");
     switch (mpu.getFilterBandwidth()) {
@@ -80,9 +97,35 @@ void Gyro::update() {
     sensors_event_t a, g, temp;
     mpu.getEvent(&a, &g, &temp);
 
-    acceleration[0] = a.acceleration.x;
-    acceleration[1] = a.acceleration.y;
-    acceleration[2] = a.acceleration.z;
+    const unsigned long now = micros();
+    if (lastMicros == 0) {
+        lastMicros = now;
+        acceleration = algebra::Vector<3> { 0.0f, 0.0f, 0.0f };
+        velocity = algebra::Vector<3> { 0.0f, 0.0f, 0.0f };
+        position = algebra::Vector<3> { 0.0f, 0.0f, 0.0f };
+        return;
+    }
+
+    const float dt = (now - lastMicros) * 1.0e-6f;
+    lastMicros = now;
+    if (dt <= 0.0f) return;
+
+    // Update orientation estimate (no-op on AVR)
+    mahonyUpdate(g.gyro.x, g.gyro.y, g.gyro.z, a.acceleration.x,
+                 a.acceleration.y, a.acceleration.z, dt);
+
+    algebra::Vector<3> accelBody { a.acceleration.x, a.acceleration.y,
+                                   a.acceleration.z };
+    algebra::Vector<3> accelWorld = rotateToWorld(q, accelBody);
+    accelWorld[2] -= G0; // remove gravity (world Z assumed up)
+
+    acceleration = accelWorld;
+
+    integrateEuler(velocity, acceleration, dt);
+    velocity[0] *= velDamping;
+    velocity[1] *= velDamping;
+    velocity[2] *= velDamping;
+    integrateEuler(position, velocity, dt);
 
     // do something with g soon
 }
