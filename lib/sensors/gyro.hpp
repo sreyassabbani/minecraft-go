@@ -1,45 +1,48 @@
 #ifndef GYRO_H
 #define GYRO_H
 
-#include <algebra.hpp>
-#include <Arduino.h>
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
+#include <Arduino.h>
+#include <algebra.hpp>
+
+using algebra::Quaternion;
+using algebra::Vector;
 
 class Gyro {
 public:
     Gyro();
 
     void begin();
-    
+
     // Updates the filter and state. Should be called frequently.
     void update();
 
-    // Getters
-    algebra::Vector<3> getLinearAcceleration() const;
-    algebra::Vector<3> getOrientationEuler() const;
-    algebra::Vector<3> getPosition() const;
-    algebra::Vector<3> getVelocity() const;
+    Vector<3> getLinearAcceleration() const;
+    Vector<3> getOrientationEuler() const;
+    Vector<3> getPosition() const;
+    Vector<3> getVelocity() const;
 
 private:
     Adafruit_MPU6050 mpu;
 
     // --- Sensor scale factors ---
-    float accelLsbPerG = 16384.0f;     // ±2g
-    float gyroLsbPerDPS = 16.4f;       // ±2000 °/s
+    float accelLsbPerG = 16384.0f; // ±2g
+    float gyroLsbPerDPS = 16.4f;   // ±2000 °/s
     const float G0 = 9.80665f;
 
     // --- Orientation state (Mahony filter) ---
-    algebra::Quaternion q{1.0f, 0.0f, 0.0f, 0.0f}; // world <- body
-    float twoKp = 2.0f * 0.5f;                  // proportional gain
-    float twoKi = 2.0f * 0.0f;                  // integral gain
-    algebra::Vector<3> integralFB{0.0f, 0.0f, 0.0f}; // integral feedback term
-    algebra::Vector<3> gyroBias{0.0f, 0.0f, 0.0f};   // software bias (rad/s)
+    Quaternion q { 1.0f, 0.0f, 0.0f, 0.0f };   // world <- body
+    float twoKp = 2.0f * 0.5f;                 // proportional gain
+    float twoKi = 2.0f * 0.0f;                 // integral gain
+    Vector<3> integralFB { 0.0f, 0.0f, 0.0f }; // integral feedback term
+    Vector<3> gyroBias { 0.0f, 0.0f, 0.0f };   // software bias (rad/s)
 
     // --- Position/velocity in world frame ---
-    algebra::Vector<3> position{0.0f, 0.0f, 0.0f};
-    algebra::Vector<3> velocity{0.0f, 0.0f, 0.0f};
-    algebra::Vector<3> linearAccelWorld{0.0f, 0.0f, 0.0f}; // Store last calculated linear accel
+    Vector<3> position { 0.0f, 0.0f, 0.0f };
+    Vector<3> velocity { 0.0f, 0.0f, 0.0f };
+    Vector<3> acceleration { 0.0f, 0.0f,
+                             0.0f }; // Store last calculated linear accel
 
     // --- Timing ---
     unsigned long lastMicros = 0;

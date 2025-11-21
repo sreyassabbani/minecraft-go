@@ -1,22 +1,58 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
+
+#if defined(__AVR__) || defined(ARDUINO_ARCH_AVR)
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#define ALG_PLAIN_ARRAY
+namespace std {
+template <class T> class initializer_list {
+    const T* begin_;
+    size_t size_;
+
+public:
+    constexpr initializer_list() : begin_(nullptr), size_(0) {}
+    constexpr initializer_list(const T* b, size_t s) : begin_(b), size_(s) {}
+    constexpr const T* begin() const { return begin_; }
+    constexpr const T* end() const { return begin_ + size_; }
+    constexpr size_t size() const { return size_; }
+};
+} // namespace std
+#else
 #include <array>
 #include <cassert>
 #include <cstddef>
 #include <initializer_list>
-#include <utility>
-
 using std::array;
+#endif
 
 namespace algebra {
 
 template <size_t LENGTH> class Vector {
-    array<float, LENGTH> data;
+#ifdef ALG_PLAIN_ARRAY
+    float data[LENGTH] {};
+#else
+    array<float, LENGTH> data {};
+#endif
 
 public:
-    Vector() : data {} {}
+    Vector() = default;
+    explicit Vector(const float (&v)[LENGTH]) {
+        for (size_t i = 0; i < LENGTH; ++i) data[i] = v[i];
+    }
+#ifndef ALG_PLAIN_ARRAY
     explicit Vector(const array<float, LENGTH>& v) : data(v) {}
+#endif
 
     explicit Vector(std::initializer_list<float> ilist) {
         assert(ilist.size() == LENGTH);
@@ -27,22 +63,24 @@ public:
     Vector(const Vector&) = default;
     Vector& operator=(const Vector&) = default;
 
-    Vector(Vector&& other) noexcept : data(std::move(other.data)) {}
+    Vector(Vector&& other) noexcept = default;
 
     static constexpr size_t length() noexcept { return LENGTH; }
 
     float& operator[](size_t idx) {
-        assert(idx < data.size());
+        assert(idx < LENGTH);
         return data[idx];
     }
 
     const float& operator[](size_t idx) const {
-        assert(idx < data.size());
+        assert(idx < LENGTH);
         return data[idx];
     }
 
     Vector& operator=(Vector&& other) noexcept {
-        if (this != &other) { data = std::move(other.data); }
+        if (this != &other) {
+            for (size_t i = 0; i < LENGTH; ++i) data[i] = other.data[i];
+        }
         return *this;
     }
 
@@ -50,9 +88,7 @@ public:
         assert(this->length() == other.length());
 
         Vector res = *this;
-        for (size_t i = 0; i < res.data.size(); ++i) {
-            res.data[i] += other.data[i];
-        }
+        for (size_t i = 0; i < LENGTH; ++i) { res.data[i] += other.data[i]; }
         return res;
     }
 
@@ -60,9 +96,7 @@ public:
         assert(this->length() == other.length());
 
         Vector res = *this;
-        for (size_t i = 0; i < res.data.size(); ++i) {
-            res.data[i] -= other.data[i];
-        }
+        for (size_t i = 0; i < LENGTH; ++i) { res.data[i] -= other.data[i]; }
         return res;
     }
 
@@ -78,7 +112,7 @@ public:
 };
 
 template <size_t ROWS, size_t COLS> class Matrix {
-    array<array<float, COLS>, ROWS> data;
+    float data[ROWS][COLS] {};
 
 public:
     size_t rows() const { return ROWS; }

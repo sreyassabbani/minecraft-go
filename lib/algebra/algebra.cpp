@@ -1,5 +1,21 @@
-#include "algebra.h"
+#include <algebra.hpp>
 
+#if defined(__AVR__) || defined(ARDUINO_ARCH_AVR)
+// Lightweight stubs for Uno testing (avoid heavy math deps)
+namespace algebra {
+Quaternion normalizeQuaternion(const Quaternion& /*q*/) {
+    return Quaternion { 1.0f, 0.0f, 0.0f, 0.0f };
+}
+
+Vector<3> rotateVector(const Quaternion& /*q*/, const Vector<3>& v) {
+    return v;
+}
+
+Vector<3> quaternionToEuler(const Quaternion& /*q*/) {
+    return Vector<3> { 0.0f, 0.0f, 0.0f };
+}
+} // namespace algebra
+#else
 #include <cmath>
 
 namespace algebra {
@@ -8,8 +24,7 @@ constexpr float kHalfPi = 1.5707963267948966f;
 }
 
 Quaternion normalizeQuaternion(const Quaternion& q) {
-    const float norm =
-        std::sqrt(q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z);
+    const float norm = std::sqrt(q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z);
     if (norm <= 1e-6f) { return Quaternion { 1.0f, 0.0f, 0.0f, 0.0f }; }
     const float inv = 1.0f / norm;
     return Quaternion { q.w * inv, q.x * inv, q.y * inv, q.z * inv };
@@ -33,18 +48,18 @@ Vector<3> quaternionToEuler(const Quaternion& q) {
 
     const float sinr_cosp = 2.0f * (qw * qx + qy * qz);
     const float cosr_cosp = 1.0f - 2.0f * (qx * qx + qy * qy);
-    const float roll = std::atan2f(sinr_cosp, cosr_cosp);
+    const float roll = std::atan2(sinr_cosp, cosr_cosp);
 
     const float sinp = 2.0f * (qw * qy - qz * qx);
-    const float pitch = (std::fabs(sinp) >= 1.0f)
-                            ? std::copysign(kHalfPi, sinp)
-                            : std::asinf(sinp);
+    const float pitch = (std::fabs(sinp) >= 1.0f) ? std::copysign(kHalfPi, sinp)
+                                                  : std::asin(sinp);
 
     const float siny_cosp = 2.0f * (qw * qz + qx * qy);
     const float cosy_cosp = 1.0f - 2.0f * (qy * qy + qz * qz);
-    const float yaw = std::atan2f(siny_cosp, cosy_cosp);
+    const float yaw = std::atan2(siny_cosp, cosy_cosp);
 
     // yaw (Z), pitch (Y), roll (X)
     return Vector<3> { yaw, pitch, roll };
 }
 } // namespace algebra
+#endif
