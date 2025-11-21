@@ -1,30 +1,31 @@
-//#include "Adafruit_ST7735.h"
-//Adafruit_ST7735 tft(10, 9, 8);
-//#include "Adafruit_ST7789.h"
-//Adafruit_ST7789 tft(10, 9, 8);
-#include "ST7796S.h"
-ST7796S tft(10, 9, 8);
-//#include "Adafruit_ILI9341.h"
-//Adafruit_ILI9341 tft(10, 9, 8);
-
+#include <Arduino.h>
+#include <ST7796S.h>
 #include "bitmap_mono.h"
 #include "bitmap_RGB.h"
 #include "bitmap_gray.h"
 #include "xbm_mono.h"
+#include <string.h>
 
-#define BLACK   0x0000
-#define BLUE    0x001F
-#define RED     0xF800
-#define GREEN   0x07E0
-#define CYAN    0x07FF
+// #include "Adafruit_ST7735.h"
+// Adafruit_ST7735 tft(10, 9, 8);
+// #include "Adafruit_ST7789.h"
+// Adafruit_ST7789 tft(10, 9, 8);
+ST7796S tft(10, 9, 8);
+// #include "Adafruit_ILI9341.h"
+// Adafruit_ILI9341 tft(10, 9, 8);
+
+#define BLACK 0x0000
+#define BLUE 0x001F
+#define RED 0xF800
+#define GREEN 0x07E0
+#define CYAN 0x07FF
 #define MAGENTA 0xF81F
-#define YELLOW  0xFFE0
-#define WHITE   0xFFFF
-#define GREY    0x8410
-#define ORANGE  0xE880
+#define YELLOW 0xFFE0
+#define WHITE 0xFFFF
+#define GREY 0x8410
+#define ORANGE 0xE880
 
-void setup()
-{
+void setup() {
     Serial.begin(9600);
 
     Serial.println(F("DEMONSTRATE Adafruit_GFX DRAWING METHODS"));
@@ -60,8 +61,7 @@ void setup()
     delay(1000);
 }
 
-int adv_space(int req, String msg = "")
-{
+int adv_space(int req, String msg = "") {
     static int cur_y = 0;
     static uint32_t prev_time;
     int ht = tft.height();
@@ -82,35 +82,35 @@ int adv_space(int req, String msg = "")
     return cur_y;
 }
 
-void RGB_2_SRAM(int16_t x, int16_t y, const uint16_t rgb_flash[], int16_t w, int16_t h)
-{
+void RGB_2_SRAM(int16_t x, int16_t y, const uint16_t rgb_flash[], int16_t w,
+                int16_t h) {
     uint16_t sram[w];
     for (int row = 0; row < h; row++) {
         memcpy_P(sram, rgb_flash + row * w, w * 2);
-        tft.drawRGBBitmap(x, y + row, sram, w, 1);  //Adafruit is fast from SRAM        
+        tft.drawRGBBitmap(x, y + row, sram, w, 1); // Adafruit is fast from SRAM
     }
 }
 
-void bmap_2_SRAM(int16_t x, int16_t y, const uint8_t bmap_flash[], int16_t w, int16_t h, uint16_t color, uint16_t bg = 0)
-{
+void bmap_2_SRAM(int16_t x, int16_t y, const uint8_t bmap_flash[], int16_t w,
+                 int16_t h, uint16_t color, uint16_t bg = 0) {
     uint16_t sram[w];
-    uint8_t c, mask, wid = (w + 7) / 8; //bytes per row
+    uint8_t c, mask, wid = (w + 7) / 8; // bytes per row
     for (int row = 0; row < h; row++) {
-        uint8_t *p = bmap_flash + row * wid;
+        const uint8_t* p = bmap_flash + row * wid;
         mask = 0;
         for (int col = 0; col < w; col++, mask >>= 1) {
             if (mask == 0) c = pgm_read_byte(p++), mask = 0x80;
             sram[col] = (c & mask) ? color : bg;
         }
-        tft.drawRGBBitmap(x, y + row, sram, w, 1);  //Adafruit is fast from SRAM        
+        tft.drawRGBBitmap(x, y + row, sram, w, 1); // Adafruit is fast from SRAM
     }
 }
 
-void gray_2_SRAM(int16_t x, int16_t y, const uint8_t gray_flash[], int16_t w, int16_t h = 0)
-{
-    const uint8_t *p = gray_flash;
+void gray_2_SRAM(int16_t x, int16_t y, const uint8_t gray_flash[], int16_t w,
+                 int16_t h = 0) {
+    const uint8_t* p = gray_flash;
     uint8_t depth = 4;
-    if (h == 0) {  //read geometry from image header instead of function arguments
+    if (h == 0) { // read geometry from image header instead of function arguments
         depth = pgm_read_word(p + 1);
         w = pgm_read_byte(p + 2);
         h = pgm_read_byte(p + 4);
@@ -120,24 +120,22 @@ void gray_2_SRAM(int16_t x, int16_t y, const uint8_t gray_flash[], int16_t w, in
     uint8_t sigmask = 0xFF << (8 - depth);
     for (int16_t row = 0; row < h; row++) {
         uint8_t mask = 0, c;
-        for (int16_t i = 0; i < w; i++ ) {
+        for (int16_t i = 0; i < w; i++) {
             if (mask == 0) {
                 c = pgm_read_byte(p++);
                 mask = 0xFF;
             }
             uint8_t r = c & sigmask;
             uint16_t color = tft.color565(r, r, r);
-            //tft.drawPixel(x + i, y + row, color); //plot each pixel
-            sram[i] = color;  //store in buffer
+            sram[i] = color; // store in buffer
             c <<= depth;
             mask <<= depth;
         }
-        tft.drawRGBBitmap(x, y + row, sram, w, 1);  //Adafruit is fast from SRAM        
+        tft.drawRGBBitmap(x, y + row, sram, w, 1); // Adafruit is fast from SRAM
     }
 }
 
-void loop(void)
-{
+void loop(void) {
     static int y = 0;
     int x = 5, w = 128, h = 64;
     const int SZ = w * h / 8;

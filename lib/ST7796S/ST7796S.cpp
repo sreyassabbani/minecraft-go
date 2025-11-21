@@ -68,8 +68,8 @@
     @param    miso  SPI MISO pin # (optional, pass -1 if unused)
 */
 /**************************************************************************/
-ST7796S::ST7796S(int8_t cs, int8_t dc, int8_t mosi,
-                                   int8_t sclk, int8_t rst, int8_t miso)
+ST7796S::ST7796S(int8_t cs, int8_t dc, int8_t mosi, int8_t sclk, int8_t rst,
+                 int8_t miso)
     : Adafruit_SPITFT(ST7796S_TFTWIDTH, ST7796S_TFTHEIGHT, cs, dc, mosi, sclk,
                       rst, miso) {}
 
@@ -97,8 +97,7 @@ ST7796S::ST7796S(int8_t cs, int8_t dc, int8_t rst)
     @param  rst       Reset pin # (optional, pass -1 if unused).
 */
 /**************************************************************************/
-ST7796S::ST7796S(SPIClass *spiClass, int8_t dc, int8_t cs,
-                                   int8_t rst)
+ST7796S::ST7796S(SPIClass* spiClass, int8_t dc, int8_t cs, int8_t rst)
     : Adafruit_SPITFT(ST7796S_TFTWIDTH, ST7796S_TFTHEIGHT, spiClass, cs, dc,
                       rst) {}
 #endif // end !ESP8266
@@ -118,8 +117,8 @@ ST7796S::ST7796S(SPIClass *spiClass, int8_t dc, int8_t cs,
     @param  rd        Read strobe pin # (optional, pass -1 if unused).
 */
 /**************************************************************************/
-ST7796S::ST7796S(tftBusWidth busWidth, int8_t d0, int8_t wr,
-                                   int8_t dc, int8_t cs, int8_t rst, int8_t rd)
+ST7796S::ST7796S(tftBusWidth busWidth, int8_t d0, int8_t wr, int8_t dc,
+                 int8_t cs, int8_t rst, int8_t rd)
     : Adafruit_SPITFT(ST7796S_TFTWIDTH, ST7796S_TFTHEIGHT, busWidth, d0, wr, dc,
                       cs, rst, rd) {}
 
@@ -190,28 +189,26 @@ static const uint8_t PROGMEM initcmd[] = {
 /**************************************************************************/
 void ST7796S::begin(uint32_t freq) {
 
-  if (!freq)
-    freq = SPI_DEFAULT_FREQ;
-  initSPI(freq);
+    if (!freq) freq = SPI_DEFAULT_FREQ;
+    initSPI(freq);
 
-  if (_rst < 0) {                 // If no hardware reset pin...
-    sendCommand(ST7796S_SWRESET); // Engage software reset
-    delay(150);
-  }
+    if (_rst < 0) {                   // If no hardware reset pin...
+        sendCommand(ST7796S_SWRESET); // Engage software reset
+        delay(150);
+    }
 
-  uint8_t cmd, x, numArgs;
-  const uint8_t *addr = initcmd;
-  while ((cmd = pgm_read_byte(addr++)) > 0) {
-    x = pgm_read_byte(addr++);
-    numArgs = x & 0x7F;
-    sendCommand(cmd, addr, numArgs);
-    addr += numArgs;
-    if (x & 0x80)
-      delay(150);
-  }
+    uint8_t cmd, x, numArgs;
+    const uint8_t* addr = initcmd;
+    while ((cmd = pgm_read_byte(addr++)) > 0) {
+        x = pgm_read_byte(addr++);
+        numArgs = x & 0x7F;
+        sendCommand(cmd, addr, numArgs);
+        addr += numArgs;
+        if (x & 0x80) delay(150);
+    }
 
-  _width = ST7796S_TFTWIDTH;
-  _height = ST7796S_TFTHEIGHT;
+    _width = ST7796S_TFTWIDTH;
+    _height = ST7796S_TFTHEIGHT;
 }
 
 /**************************************************************************/
@@ -221,33 +218,33 @@ void ST7796S::begin(uint32_t freq) {
 */
 /**************************************************************************/
 void ST7796S::setRotation(uint8_t m) {
-  rotation = m % 4; // can't be higher than 3
-  switch (rotation) {
-  case 0:
-    m = (MADCTL_MX | MADCTL_BGR);
-    _width = ST7796S_TFTWIDTH;
-    _height = ST7796S_TFTHEIGHT;
-    break;
-  case 1:
-    m = (MADCTL_MV | MADCTL_BGR);
-    _width = ST7796S_TFTHEIGHT;
-    _height = ST7796S_TFTWIDTH;
-    break;
-  case 2:
-    m = (MADCTL_MY | MADCTL_ML | MADCTL_BGR);
-    _width = ST7796S_TFTWIDTH;
-    _height = ST7796S_TFTHEIGHT;
-    break;
-  case 3:
-    m = (MADCTL_MX | MADCTL_MY | MADCTL_MV | MADCTL_ML | MADCTL_BGR);
-    _width = ST7796S_TFTHEIGHT;
-    _height = ST7796S_TFTWIDTH;
-    break;
-  }
+    rotation = m % 4; // can't be higher than 3
+    switch (rotation) {
+    case 0:
+        m = (MADCTL_MX | MADCTL_BGR);
+        _width = ST7796S_TFTWIDTH;
+        _height = ST7796S_TFTHEIGHT;
+        break;
+    case 1:
+        m = (MADCTL_MV | MADCTL_BGR);
+        _width = ST7796S_TFTHEIGHT;
+        _height = ST7796S_TFTWIDTH;
+        break;
+    case 2:
+        m = (MADCTL_MY | MADCTL_ML | MADCTL_BGR);
+        _width = ST7796S_TFTWIDTH;
+        _height = ST7796S_TFTHEIGHT;
+        break;
+    case 3:
+        m = (MADCTL_MX | MADCTL_MY | MADCTL_MV | MADCTL_ML | MADCTL_BGR);
+        _width = ST7796S_TFTHEIGHT;
+        _height = ST7796S_TFTWIDTH;
+        break;
+    }
 
-  sendCommand(ST7796S_MADCTL, &m, 1);
-  setScrollMargins(0, 0); //.kbv
-  scrollTo(0);   
+    sendCommand(ST7796S_MADCTL, &m, 1);
+    setScrollMargins(0, 0); //.kbv
+    scrollTo(0);
 }
 
 /**************************************************************************/
@@ -257,7 +254,7 @@ void ST7796S::setRotation(uint8_t m) {
 */
 /**************************************************************************/
 void ST7796S::invertDisplay(bool invert) {
-  sendCommand(invert ? ST7796S_INVON : ST7796S_INVOFF);
+    sendCommand(invert ? ST7796S_INVON : ST7796S_INVOFF);
 }
 
 /**************************************************************************/
@@ -267,10 +264,10 @@ void ST7796S::invertDisplay(bool invert) {
 */
 /**************************************************************************/
 void ST7796S::scrollTo(uint16_t y) {
-  uint8_t data[2];
-  data[0] = y >> 8;
-  data[1] = y & 0xff;
-  sendCommand(ST7796S_VSCRSADD, (uint8_t *)data, 2);
+    uint8_t data[2];
+    data[0] = y >> 8;
+    data[1] = y & 0xff;
+    sendCommand(ST7796S_VSCRSADD, (uint8_t*)data, 2);
 }
 
 /**************************************************************************/
@@ -281,18 +278,18 @@ void ST7796S::scrollTo(uint16_t y) {
  */
 /**************************************************************************/
 void ST7796S::setScrollMargins(uint16_t top, uint16_t bottom) {
-  // TFA+VSA+BFA must equal 480
-  if (top + bottom <= ST7796S_TFTHEIGHT) {
-    uint16_t middle = ST7796S_TFTHEIGHT - top - bottom;
-    uint8_t data[6];
-    data[0] = top >> 8;
-    data[1] = top & 0xff;
-    data[2] = middle >> 8;
-    data[3] = middle & 0xff;
-    data[4] = bottom >> 8;
-    data[5] = bottom & 0xff;
-    sendCommand(ST7796S_VSCRDEF, (uint8_t *)data, 6);
-  }
+    // TFA+VSA+BFA must equal 480
+    if (top + bottom <= ST7796S_TFTHEIGHT) {
+        uint16_t middle = ST7796S_TFTHEIGHT - top - bottom;
+        uint8_t data[6];
+        data[0] = top >> 8;
+        data[1] = top & 0xff;
+        data[2] = middle >> 8;
+        data[3] = middle & 0xff;
+        data[4] = bottom >> 8;
+        data[5] = bottom & 0xff;
+        sendCommand(ST7796S_VSCRDEF, (uint8_t*)data, 6);
+    }
 }
 
 /**************************************************************************/
@@ -306,16 +303,15 @@ void ST7796S::setScrollMargins(uint16_t top, uint16_t bottom) {
     @param   h   Height of rectangle
 */
 /**************************************************************************/
-void ST7796S::setAddrWindow(uint16_t x1, uint16_t y1, uint16_t w,
-                                     uint16_t h) {
-  uint16_t x2 = (x1 + w - 1), y2 = (y1 + h - 1);
-  writeCommand(ST7796S_CASET); // Column address set
-  SPI_WRITE16(x1);
-  SPI_WRITE16(x2);
-  writeCommand(ST7796S_PASET); // Row address set
-  SPI_WRITE16(y1);
-  SPI_WRITE16(y2);
-  writeCommand(ST7796S_RAMWR); // Write to RAM
+void ST7796S::setAddrWindow(uint16_t x1, uint16_t y1, uint16_t w, uint16_t h) {
+    uint16_t x2 = (x1 + w - 1), y2 = (y1 + h - 1);
+    writeCommand(ST7796S_CASET); // Column address set
+    SPI_WRITE16(x1);
+    SPI_WRITE16(x2);
+    writeCommand(ST7796S_PASET); // Row address set
+    SPI_WRITE16(y1);
+    SPI_WRITE16(y2);
+    writeCommand(ST7796S_RAMWR); // Write to RAM
 }
 
 /**************************************************************************/
@@ -329,11 +325,10 @@ void ST7796S::setAddrWindow(uint16_t x1, uint16_t y1, uint16_t w,
  */
 /**************************************************************************/
 uint8_t ST7796S::readcommand8(uint8_t commandByte, uint8_t index) {
-  uint8_t data = 0x10 + index, ret;
-  sendCommand(0xFB, &data, 1); // Set Index Register
-  ret = Adafruit_SPITFT::readcommand8(commandByte);
-  data = 0x00;
-  sendCommand(0xFB, &data, 1); // Set Index Register
-  return ret;
+    uint8_t data = 0x10 + index, ret;
+    sendCommand(0xFB, &data, 1); // Set Index Register
+    ret = Adafruit_SPITFT::readcommand8(commandByte);
+    data = 0x00;
+    sendCommand(0xFB, &data, 1); // Set Index Register
+    return ret;
 }
-
