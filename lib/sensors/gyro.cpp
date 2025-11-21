@@ -40,6 +40,13 @@ void Gyro::begin() {
     gyroBias = algebra::Vector<3> { gb[0] / samples, gb[1] / samples,
                                     gb[2] / samples };
 
+    Serial.print(F("Gyro bias (rad/s): "));
+    Serial.print(gyroBias[0], 6);
+    Serial.print(F(", "));
+    Serial.print(gyroBias[1], 6);
+    Serial.print(F(", "));
+    Serial.println(gyroBias[2], 6);
+
     lastMicros = micros();
 }
 
@@ -88,6 +95,13 @@ void Gyro::update() {
                                         velocity[1] * velDamping,
                                         velocity[2] * velDamping };
     }
+
+    if (isStill && !wasStill) {
+        Serial.println(F("Gyro: still detected -> velocity reset"));
+    } else if (!isStill && wasStill) {
+        Serial.println(F("Gyro: motion detected"));
+    }
+    wasStill = isStill;
 
     position = algebra::Vector<3> { position[0] + velocity[0] * dt,
                                     position[1] + velocity[1] * dt,

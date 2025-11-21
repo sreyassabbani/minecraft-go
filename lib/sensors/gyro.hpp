@@ -1,9 +1,10 @@
 #ifndef GYRO_H
 #define GYRO_H
 
-#include "algebra.h"
+#include <algebra.hpp>
 #include <Arduino.h>
-#include <MPU6050.h>
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
 
 class Gyro {
 public:
@@ -21,7 +22,7 @@ public:
     algebra::Vector<3> getVelocity() const;
 
 private:
-    MPU6050 mpu;
+    Adafruit_MPU6050 mpu;
 
     // --- Sensor scale factors ---
     float accelLsbPerG = 16384.0f;     // ±2g
@@ -42,6 +43,7 @@ private:
 
     // --- Timing ---
     unsigned long lastMicros = 0;
+    bool wasStill = false;
 
     // --- Drift mitigation thresholds ---
     const float stillAccelThresh_g = 0.02f;

@@ -7,6 +7,7 @@ The goal of this project is to explore how far we can push LCD voxel rendering o
 ## Game Mechanics
 
 Instead of a traditional game controller, gameplay is driven by several physical sensors:
+
 - inertial measurement unit (IMU)
 - photoresistor
 - thermistor

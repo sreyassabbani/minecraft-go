@@ -1,7 +1,7 @@
 #include <Arduino.h>
-#include "utils/algebra.h"
-#include "utils/general.h"
-#include "utils/gyro.h"
+#include <algebra.hpp>
+#include <general.hpp>
+#include <gyro.hpp>
 
 Gyro gyro;
 unsigned long lastPrintMs = 0;
