@@ -6,6 +6,7 @@
 #include <ST7796S.h>
 #include <cstdint>
 #include <cstring>
+#include <new>
 
 namespace display {
 
@@ -40,46 +41,60 @@ struct TextStyle {
 
 class Display {
 public:
-    Display(ST7796S& driver, uint16_t width = ST7796S_TFTWIDTH,
-            uint16_t height = ST7796S_TFTHEIGHT)
-        : tft(driver), width_(width), height_(height) {}
+    struct Pins {
+        int8_t cs;
+        int8_t dc;
+        int8_t rst;
+    };
 
-    void begin(uint8_t rotation = 1, Color clearColor = Color::Black(),
-               bool textWrap = true, uint32_t spiFreq = 0) {
-        tft.begin(spiFreq);
-        tft.setRotation(rotation);
-        tft.setTextWrap(textWrap);
-        tft.fillScreen(clearColor.value);
+    explicit Display(
+        uint8_t rotation = 1, 
+        Color clear = Color::Black(),
+        bool wrap = true,
+        uint32_t spiFreq = 0
+    ) {
+        if (!tft_) {
+            tft_ = new (&tftStorage_) ST7796S(pins_.cs, pins_.dc, pins_.rst);
+        }
+        width_ = ST7796S_TFTWIDTH;
+        height_ = ST7796S_TFTHEIGHT;
+
+        tft().begin(spiFreq);
+        tft().setRotation(rotation);
+        tft().setTextWrap(wrap);
+        tft().fillScreen(clear.value);
     }
 
-    void clear(Color color) { tft.fillScreen(color.value); }
+    void setPins(const Pins& pins) { pins_ = pins; }
+
+    void clear(Color color) { tft().fillScreen(color.value); }
 
     void drawPixel(int16_t x, int16_t y, Color color) {
-        tft.drawPixel(x, y, color.value);
+        tft().drawPixel(x, y, color.value);
     }
 
     void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, Color color) {
-        tft.fillRect(x, y, w, h, color.value);
+        tft().fillRect(x, y, w, h, color.value);
     }
 
     void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, Color color) {
-        tft.drawRect(x, y, w, h, color.value);
+        tft().drawRect(x, y, w, h, color.value);
     }
 
     void drawFastHLine(int16_t x, int16_t y, int16_t w, Color color) {
-        tft.drawFastHLine(x, y, w, color.value);
+        tft().drawFastHLine(x, y, w, color.value);
     }
 
     void drawFastVLine(int16_t x, int16_t y, int16_t h, Color color) {
-        tft.drawFastVLine(x, y, h, color.value);
+        tft().drawFastVLine(x, y, h, color.value);
     }
 
     void drawText(int16_t x, int16_t y, const char* text,
                   const TextStyle& style) {
-        tft.setCursor(x, y);
-        tft.setTextColor(style.fg.value, style.bg.value);
-        tft.setTextSize(style.size);
-        tft.print(text);
+        tft().setCursor(x, y);
+        tft().setTextColor(style.fg.value, style.bg.value);
+        tft().setTextSize(style.size);
+        tft().print(text);
     }
 
     void drawTextCentered(int16_t cx, int16_t cy, const char* text,
@@ -92,19 +107,29 @@ public:
         drawText(x, y, text, style);
     }
 
-    void blit565(int16_t x, int16_t y, const uint16_t* pixels16,
-                 int16_t w, int16_t h) {
-        tft.drawRGBBitmap(x, y, pixels16, w, h);
+    void blit565(int16_t x, int16_t y, const uint16_t* pixels16, int16_t w,
+                 int16_t h) {
+        tft().drawRGBBitmap(x, y, pixels16, w, h);
     }
 
     uint16_t width() const { return width_; }
     uint16_t height() const { return height_; }
 
 private:
-    ST7796S& tft;
-    uint16_t width_;
-    uint16_t height_;
+    ST7796S& tft() { return *tft_; }
+    const ST7796S& tft() const { return *tft_; }
+
+    ST7796S* tft_ { nullptr };
+    alignas(ST7796S) uint8_t tftStorage_[sizeof(ST7796S)];
+    Pins pins_ { 10, 9, 8 }; // defaults; override with setPins()
+    uint16_t width_ { 0 };
+    uint16_t height_ { 0 };
 };
+
+static inline Display& screen() {
+    static Display s;
+    return s;
+}
 
 } // namespace display
 

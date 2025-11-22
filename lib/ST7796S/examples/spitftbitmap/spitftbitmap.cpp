@@ -13,10 +13,10 @@
   MIT license, all text above must be included in any redistribution
  ****************************************************/
 
-#include <Arduino.h>
 #include <Adafruit_GFX.h> // Core graphics library
-#include <SPI.h>
+#include <Arduino.h>
 #include <SD.h>
+#include <SPI.h>
 #include <ST7796S.h>
 
 // TFT display and SD card will share the hardware SPI interface.
@@ -43,9 +43,7 @@ void setup(void) {
     tft.fillScreen(ST7796S_BLUE);
 
     Serial.print("Initializing SD card...");
-    if (!SD.begin(SD_CS)) {
-        Serial.println("failed!");
-    }
+    if (!SD.begin(SD_CS)) { Serial.println("failed!"); }
     Serial.println("OK!");
 
     bmpDraw((char*)"jumpers.bmp", 0, 0);
@@ -66,14 +64,14 @@ void loop() {}
 void bmpDraw(char* filename, uint8_t x, uint16_t y) {
 
     File bmpFile;
-    int bmpWidth, bmpHeight;          // W+H in pixels
-    uint8_t bmpDepth;                 // Bit depth (currently must be 24)
-    uint32_t bmpImageoffset;          // Start of image data in file
-    uint32_t rowSize;                 // Not always = bmpWidth; may have padding
-    uint8_t sdbuffer[3 * BUFFPIXEL];  // pixel buffer (R+G+B per pixel)
+    int bmpWidth, bmpHeight;         // W+H in pixels
+    uint8_t bmpDepth;                // Bit depth (currently must be 24)
+    uint32_t bmpImageoffset;         // Start of image data in file
+    uint32_t rowSize;                // Not always = bmpWidth; may have padding
+    uint8_t sdbuffer[3 * BUFFPIXEL]; // pixel buffer (R+G+B per pixel)
     uint8_t buffidx = sizeof(sdbuffer); // Current position in sdbuffer
-    bool goodBmp = false;             // Set to true on valid header parse
-    bool flip = true;                 // BMP is stored bottom-to-top
+    bool goodBmp = false;               // Set to true on valid header parse
+    bool flip = true;                   // BMP is stored bottom-to-top
     int w, h, row, col;
     uint8_t r, g, b;
     uint32_t pos = 0, startTime = millis();
@@ -104,11 +102,12 @@ void bmpDraw(char* filename, uint8_t x, uint16_t y) {
         Serial.println(read32(bmpFile));
         bmpWidth = read32(bmpFile);
         bmpHeight = read32(bmpFile);
-        if (read16(bmpFile) == 1) { // # planes -- must be '1'
+        if (read16(bmpFile) == 1) {     // # planes -- must be '1'
             bmpDepth = read16(bmpFile); // bits per pixel
             Serial.print(F("Bit Depth: "));
             Serial.println(bmpDepth);
-            if ((bmpDepth == 24) && (read32(bmpFile) == 0)) { // 0 = uncompressed
+            if ((bmpDepth == 24) &&
+                (read32(bmpFile) == 0)) { // 0 = uncompressed
 
                 goodBmp = true; // Supported BMP format -- proceed!
                 Serial.print(F("Image size: "));
@@ -139,15 +138,16 @@ void bmpDraw(char* filename, uint8_t x, uint16_t y) {
                 for (row = 0; row < h; row++) { // For each scanline...
 
                     // Seek to start of scan line.
-                    if (flip) // Bitmap is stored bottom-to-top order (normal BMP)
+                    if (flip) // Bitmap is stored bottom-to-top order (normal
+                              // BMP)
                         pos = bmpImageoffset + (bmpHeight - 1 - row) * rowSize;
                     else // Bitmap is stored top-to-bottom
                         pos = bmpImageoffset + row * rowSize;
                     if (bmpFile.position() != pos) { // Need seek?
-                        tft.endWrite(); // End TFT transaction
+                        tft.endWrite();              // End TFT transaction
                         bmpFile.seek(pos);
                         buffidx = sizeof(sdbuffer); // Force buffer reload
-                        tft.startWrite(); // Start new TFT transaction
+                        tft.startWrite();           // Start new TFT transaction
                     }
 
                     for (col = 0; col < w; col++) { // For each pixel...
@@ -155,7 +155,7 @@ void bmpDraw(char* filename, uint8_t x, uint16_t y) {
                         if (buffidx >= sizeof(sdbuffer)) { // Indeed
                             tft.endWrite(); // End TFT transaction
                             bmpFile.read(sdbuffer, sizeof(sdbuffer));
-                            buffidx = 0; // Set index to beginning
+                            buffidx = 0;      // Set index to beginning
                             tft.startWrite(); // Start new TFT transaction
                         }
 

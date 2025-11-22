@@ -1,9 +1,9 @@
-#include <Arduino.h>
-#include <ST7796S.h>
-#include "bitmap_mono.h"
 #include "bitmap_RGB.h"
 #include "bitmap_gray.h"
+#include "bitmap_mono.h"
 #include "xbm_mono.h"
+#include <Arduino.h>
+#include <ST7796S.h>
 #include <string.h>
 
 // #include "Adafruit_ST7735.h"
@@ -40,12 +40,15 @@ void setup() {
     Serial.println(F("GFX drawXBitmap() plots an XBM bitmap stored in flash"));
     Serial.println(F("GFX drawGrayscaleBitmap() is not shown"));
     Serial.println(F("GFX drawRGBBitmap() plots one colour pixel at a time"));
-    Serial.println(F("from Flash or SRAM and with a monochrome transparent bitmask"));
+    Serial.println(
+        F("from Flash or SRAM and with a monochrome transparent bitmask"));
     Serial.println(F(""));
-    Serial.println(F("Adafruit TFT libraries optimise drawRGBBitmap() from SRAM"));
+    Serial.println(
+        F("Adafruit TFT libraries optimise drawRGBBitmap() from SRAM"));
     Serial.println(F("it is worth reading one row at a time from flash"));
     Serial.println(F("look at the user functions that do this"));
-    Serial.println(F("they are much faster than the GFX drawxxx() base methods"));
+    Serial.println(
+        F("they are much faster than the GFX drawxxx() base methods"));
     Serial.println(F(""));
 
 #if 0
@@ -110,7 +113,8 @@ void gray_2_SRAM(int16_t x, int16_t y, const uint8_t gray_flash[], int16_t w,
                  int16_t h = 0) {
     const uint8_t* p = gray_flash;
     uint8_t depth = 4;
-    if (h == 0) { // read geometry from image header instead of function arguments
+    if (h ==
+        0) { // read geometry from image header instead of function arguments
         depth = pgm_read_word(p + 1);
         w = pgm_read_byte(p + 2);
         h = pgm_read_byte(p + 4);

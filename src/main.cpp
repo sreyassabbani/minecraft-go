@@ -1,18 +1,7 @@
 #include <Arduino.h>
-#include <SPI.h>
-#include <ST7796S.h>
 #include <display.hpp>
 
-constexpr uint8_t TFT_CS = 10;
-constexpr uint8_t TFT_DC = 9;
-constexpr uint8_t TFT_RST = 8;
-
-// ST7796S panel is 320x480.
-constexpr uint16_t TFT_WIDTH = ST7796S_TFTWIDTH;
-constexpr uint16_t TFT_HEIGHT = ST7796S_TFTHEIGHT;
-
-ST7796S tft(TFT_CS, TFT_DC, TFT_RST); // hardware SPI
-display::Display screen(tft, TFT_WIDTH, TFT_HEIGHT);
+using display::screen;
 
 void drawSplash() {
     display::TextStyle title { display::Color::White(), display::Color::Black(),
@@ -20,15 +9,15 @@ void drawSplash() {
     display::TextStyle subtitle { display::Color::Gray(),
                                   display::Color::Black(), 2 };
 
-    screen.clear(display::Color::Black());
-    screen.drawTextCentered(screen.width() / 2, screen.height() / 2 - 20,
+    screen().clear(display::Color::Black());
+    screen().drawTextCentered(screen().width() / 2, screen().height() / 2 - 20,
                             "Display OK", title);
-    screen.drawTextCentered(screen.width() / 2, screen.height() / 2 + 20,
+    screen().drawTextCentered(screen().width() / 2, screen().height() / 2 + 20,
                             "ST77xx Test", subtitle);
 }
 
 void drawColorBars() {
-    const uint16_t barH = screen.height() / 6;
+    const uint16_t barH = screen().height() / 6;
     display::Color bars[] = {
         display::Color::Red(),  display::Color::Green(),
         display::Color::Blue(), display::Color::White(),
@@ -36,13 +25,17 @@ void drawColorBars() {
     };
 
     for (uint8_t i = 0; i < 6; ++i) {
-        screen.fillRect(0, i * barH, screen.width(), barH, bars[i]);
+        screen().fillRect(0, i * barH, screen().width(), barH, bars[i]);
     }
 }
 
 void setup() {
+    // baud rate for Due
     Serial.begin(115200);
-    screen.begin(/*rotation=*/1, display::Color::Black(), /*textWrap=*/true);
+
+    // initializes a static `display::Display`
+    screen();
+
     drawSplash();
     delay(1500);
 }
