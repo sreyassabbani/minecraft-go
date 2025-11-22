@@ -5,10 +5,22 @@ We use an `ST7796S` 4.0'' TFT SPI `480x320` LCD for this project. We have abstra
 ```cpp
 #include <display.hpp>
 
-display::Display screen;
+using display::screen;
 
 void setup() {
-    screen.begin();
+    // need to write this once:
+    screen();
+}
+
+void loop() {
+    // use it elsewhere:
+    screen().clear(display::Color::Black());
+
+    screen().drawTextCentered(
+        screen().width() / 2,
+        screen().height() / 2 + 20,
+        "ST77xx Test", subtitle
+    );
 }
 ```
 
