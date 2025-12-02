@@ -100,6 +100,12 @@ public:
         return res;
     }
 
+    Vector operator*(float scalar) const {
+        Vector res = *this;
+        for (size_t i = 0; i < LENGTH; ++i) { res.data[i] *= scalar; }
+        return res;
+    }
+
     float dot(const Vector& other) const {
         float res = 0;
 
