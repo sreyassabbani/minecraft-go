@@ -34,9 +34,11 @@ bool World::isSolid(uint8_t block) const {
 
 void World::fillTestWorld() {
     // Floor
+    // Floor (checkerboard for visibility)
     for (int x = 0; x < WIDTH; ++x) {
         for (int z = 0; z < DEPTH; ++z) {
-            setBlock(x, 0, z, STONE);
+            if ((x + z) % 2 == 0) setBlock(x, 0, z, GRASS);
+            else setBlock(x, 0, z, STONE);
         }
     }
 

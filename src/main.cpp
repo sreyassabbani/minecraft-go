@@ -45,15 +45,14 @@ void loop() {
     // Set player to fixed position where they can see the world
     static bool playerPositioned = false;
     if (!playerPositioned) {
-        // X=5 centers on world (world is 0-10)
-        // Y=0 works correctly
-        // Z=-8 to see depth
-        game.player.position = Vec3({5.0f, 0.0f, -8.0f});
+        // Camera at origin (0,0,0)
+        // We are moving the world to be in front of the camera
+        game.player.position = Vec3({0.0f, 0.0f, 0.0f});
         
         game.player.velocity = Vec3({0.0f, 0.0f, 0.0f});
         playerPositioned = true;
         
-        Serial.println("Camera at (5, 0, -8) - centered, ground level");
+        Serial.println("Camera at (0, 0, 0) - world moved to be in front");
     }
     
     // Render full world (throttled for performance)

@@ -37,22 +37,34 @@ void Renderer::render(const World& world, const Player& player) {
     
     // Rasterize all faces
     int rendered = 0;
+    int onScreen = 0;
     for (int i = 0; i < faceList.count(); i++) {
         const Triangle& tri = faceList[i];
         if (tri.visible) {
-            if (i < 3) {
-                Serial.print("Tri ");
-                Serial.print(i); Serial.print(": (");
+            // Check if on screen
+            bool isOnScreen = (tri.x[0] >= 0 && tri.x[0] < display.width() && tri.y[0] >= 0 && tri.y[0] < display.height()) ||
+                              (tri.x[1] >= 0 && tri.x[1] < display.width() && tri.y[1] >= 0 && tri.y[1] < display.height()) ||
+                              (tri.x[2] >= 0 && tri.x[2] < display.width() && tri.y[2] >= 0 && tri.y[2] < display.height());
+            
+            if (isOnScreen && onScreen < 3) {
+                Serial.print("OnScreen Tri: (");
                 Serial.print(tri.x[0]); Serial.print(","); Serial.print(tri.y[0]); Serial.print(") (");
                 Serial.print(tri.x[1]); Serial.print(","); Serial.print(tri.y[1]); Serial.print(") (");
                 Serial.print(tri.x[2]); Serial.print(","); Serial.print(tri.y[2]); Serial.println(")");
+                onScreen++;
             }
-            
+
             Raster::fillTriangle(display, 
                 tri.x[0], tri.y[0],
                 tri.x[1], tri.y[1],
                 tri.x[2], tri.y[2],
                 tri.color);
+            
+            // Simple wireframe effect: draw black outline
+            display.drawLine(tri.x[0], tri.y[0], tri.x[1], tri.y[1], display::Color::Black());
+            display.drawLine(tri.x[1], tri.y[1], tri.x[2], tri.y[2], display::Color::Black());
+            display.drawLine(tri.x[2], tri.y[2], tri.x[0], tri.y[0], display::Color::Black());
+            
             rendered++;
         }
     }
@@ -199,6 +211,14 @@ bool Renderer::projectVertex(const Vec3& worldPos, const Mat4& viewProj, int16_t
     float ndcY = clipPos[1] * invW;
     float ndcZ = clipPos[2] * invW;
     
+    // Debug center block projection (approximate check)
+    if (abs(worldPos[0] - 5.0f) < 0.1f && abs(worldPos[2]) < 0.1f) {
+        Serial.print("Proj (5,y,0): NDC=(");
+        Serial.print(ndcX); Serial.print(",");
+        Serial.print(ndcY); Serial.print(") W=");
+        Serial.println(clipPos[3]);
+    }
+    
     // Convert to screen space
     float screenX = (ndcX + 1.0f) * 0.5f * (float)display.width();
     float screenY = (1.0f - ndcY) * 0.5f * (float)display.height();
@@ -285,9 +305,18 @@ void Renderer::extractFaces(const World& world, const Camera& cam, const Mat4& v
                 uint8_t block = world.getBlock(x, y, z);
                 if (block == AIR) continue;
                 
-                float x0 = (float)x, x1 = (float)x + 1.0f;
-                float y0 = (float)y, y1 = (float)y + 1.0f;
-                float z0 = (float)z, z1 = (float)z + 1.0f;
+                // Apply offset to center the world
+                // World is 0-10. Center X at 0 (subtract 5)
+                // Move Y down so camera is "above" (subtract 2)
+                // Move Z forward but closer (add 2) - this makes blocks look bigger
+                float worldX = (float)x - 5.0f;
+                float worldY = (float)y - 2.0f; 
+                float worldZ = (float)z + 2.0f;
+                
+                // Define vertices relative to block origin
+                float x0 = worldX, x1 = worldX + 1.0f;
+                float y0 = worldY, y1 = worldY + 1.0f;
+                float z0 = worldZ, z1 = worldZ + 1.0f;
                 
                 // Check 6 neighbors
                 struct { int dx, dy, dz; } dirs[] = {

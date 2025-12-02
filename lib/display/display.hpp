@@ -89,6 +89,10 @@ public:
         tft().drawFastVLine(x, y, h, color.value);
     }
 
+    void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, Color color) {
+        tft().drawLine(x0, y0, x1, y1, color.value);
+    }
+
     void drawText(int16_t x, int16_t y, const char* text,
                   const TextStyle& style) {
         tft().setCursor(x, y);
