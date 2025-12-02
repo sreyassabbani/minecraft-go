@@ -1,8 +1,7 @@
-#ifndef PLAYER_H
-#define PLAYER_H
+#pragma once
 
-#include "../../lib/algebra/algebra.hpp"
-#include "World.h"
+#include <algebra.hpp>
+#include <world.hpp>
 
 class Player {
 public:
@@ -26,5 +25,3 @@ private:
     void resolveCollisions(World& world, algebra::Vector<3>& vel, float dt);
     bool checkCollision(World& world, const algebra::Vector<3>& pos);
 };
-
-#endif

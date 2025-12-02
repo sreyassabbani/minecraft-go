@@ -1,7 +1,6 @@
-#ifndef FACELIST_H
-#define FACELIST_H
+#pragma once
 
-#include "../../lib/algebra/algebra.hpp"
+#include <algebra.hpp>
 #include <stdint.h>
 
 using Vec3 = algebra::Vector<3>;
@@ -12,13 +11,13 @@ struct Triangle {
     // Screen-space vertices (in pixels)
     int16_t x[3];
     int16_t y[3];
-    
+
     // Depth for sorting (average Z in view space)
     float depth;
-    
+
     // RGB565 color
     uint16_t color;
-    
+
     // Visibility flag
     bool visible;
 };
@@ -28,28 +27,26 @@ struct Triangle {
 class FaceList {
 public:
     static const int MAX_TRIANGLES = 2000;
-    
+
     FaceList();
-    
+
     // Add a triangle to the list
     bool add(const Triangle& tri);
-    
+
     // Clear all triangles
     void clear();
-    
+
     // Get number of triangles
     int count() const { return triCount; }
-    
+
     // Access triangle by index
     const Triangle& operator[](int index) const { return triangles[index]; }
     Triangle& operator[](int index) { return triangles[index]; }
-    
+
     // Sort triangles by depth (far to near for painter's algorithm)
     void sortByDepth();
-    
+
 private:
     Triangle triangles[MAX_TRIANGLES];
     int triCount;
 };
-
-#endif

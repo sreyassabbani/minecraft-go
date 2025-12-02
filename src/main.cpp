@@ -1,15 +1,13 @@
-#include "../lib/algebra/algebra.hpp"
-#include "../lib/display/display.hpp"
-#include "../lib/game/GameState.h"
-#include "../lib/game/Raster.h"
-#include "../lib/game/Renderer.h"
 #include <Arduino.h>
+#include <game_state.hpp>
+#include <renderer.hpp>
 
 using Vec3 = algebra::Vector<3>;
+using display::screen;
 
 GameState game;
 // Renderer will be initialized in setup or globally if display is ready.
-// Display is a singleton via display::screen().
+// Display is a singleton via screen().
 Renderer* renderer = nullptr;
 
 // init renderer here? or have game.render() ?
@@ -17,17 +15,14 @@ Renderer* renderer = nullptr;
 void setup() {
     Serial.begin(115200);
     // Initialize Display
-    // Assuming display::screen() constructor handles initialization or we need
-    // to call something? Looking at display.hpp, constructor calls
-    // tft().begin(). So accessing display::screen() should be enough.
 
-    renderer = new Renderer(display::screen());
+    renderer = new Renderer(screen());
 
     Serial.println("Minecraft Go Initialized");
 
     // Test display by drawing a rectangle
     Serial.println("Testing display...");
-    display::screen().fillRect(100, 100, 100, 100, display::Color::Red());
+    screen().fillRect(100, 100, 100, 100, display::Color::Red());
     delay(2000); // Show red square for 2 seconds
 
     Serial.println("Display test complete");
@@ -36,10 +31,10 @@ void setup() {
 void loop() {
     static uint32_t last = millis();
     uint32_t now = millis();
-    float dt = (now - last) / 1000.0f;
+    float dt = (now - last) / 10000.0f;
     last = now;
 
-    if (dt > 0.1f) dt = 0.1f;
+    if (dt > 0.1f) dt = 0.01f;
 
     // Disable physics for now - freeze player at good viewing position
     // game.update(dt);
@@ -49,7 +44,7 @@ void loop() {
     if (!playerPositioned) {
         // Camera at origin (0,0,0)
         // We are moving the world to be in front of the camera
-        game.player.position = Vec3({ 0.0f, 0.0f, 0.0f });
+        game.player.position = Vec3({ 0.0f, -1.0f, 0.0f });
 
         game.player.velocity = Vec3({ 0.0f, 0.0f, 0.0f });
         playerPositioned = true;
