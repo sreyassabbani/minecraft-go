@@ -1,9 +1,9 @@
-#include <Arduino.h>
-#include "../lib/game/GameState.h"
-#include "../lib/game/Renderer.h"
-#include "../lib/game/Raster.h"
-#include "../lib/display/display.hpp"
 #include "../lib/algebra/algebra.hpp"
+#include "../lib/display/display.hpp"
+#include "../lib/game/GameState.h"
+#include "../lib/game/Raster.h"
+#include "../lib/game/Renderer.h"
+#include <Arduino.h>
 
 using Vec3 = algebra::Vector<3>;
 
@@ -12,22 +12,24 @@ GameState game;
 // Display is a singleton via display::screen().
 Renderer* renderer = nullptr;
 
+// init renderer here? or have game.render() ?
+
 void setup() {
     Serial.begin(115200);
     // Initialize Display
-    // Assuming display::screen() constructor handles initialization or we need to call something?
-    // Looking at display.hpp, constructor calls tft().begin().
-    // So accessing display::screen() should be enough.
-    
+    // Assuming display::screen() constructor handles initialization or we need
+    // to call something? Looking at display.hpp, constructor calls
+    // tft().begin(). So accessing display::screen() should be enough.
+
     renderer = new Renderer(display::screen());
-    
+
     Serial.println("Minecraft Go Initialized");
-    
+
     // Test display by drawing a rectangle
     Serial.println("Testing display...");
     display::screen().fillRect(100, 100, 100, 100, display::Color::Red());
     delay(2000); // Show red square for 2 seconds
-    
+
     Serial.println("Display test complete");
 }
 
@@ -41,29 +43,29 @@ void loop() {
 
     // Disable physics for now - freeze player at good viewing position
     // game.update(dt);
-    
+
     // Set player to fixed position where they can see the world
     static bool playerPositioned = false;
     if (!playerPositioned) {
         // Camera at origin (0,0,0)
         // We are moving the world to be in front of the camera
-        game.player.position = Vec3({0.0f, 0.0f, 0.0f});
-        
-        game.player.velocity = Vec3({0.0f, 0.0f, 0.0f});
+        game.player.position = Vec3({ 0.0f, 0.0f, 0.0f });
+
+        game.player.velocity = Vec3({ 0.0f, 0.0f, 0.0f });
         playerPositioned = true;
-        
+
         Serial.println("Camera at (0, 0, 0) - world moved to be in front");
     }
-    
+
     // Render full world (throttled for performance)
     static uint32_t lastRender = 0;
     if (now - lastRender > 100) { // Render every 100ms (10 FPS)
-        if (renderer) {
-            renderer->render(game.world, game.player);
-        }
+        if (renderer) { renderer->render(game.world, game.player); }
         lastRender = now;
     }
-    
+
+    game.update(dt);
+
     // Debug output
     static uint32_t lastPrint = 0;
     if (now - lastPrint > 1000) {
@@ -73,11 +75,19 @@ void loop() {
         Serial.print(game.player.position[1]);
         Serial.print(", ");
         Serial.println(game.player.position[2]);
-        
+
         // FPS calculation could go here
         Serial.print("FPS: ");
         Serial.println(1.0f / dt);
-        
+
         lastPrint = now;
     }
+
+    // update camera normal based on IMU (depends on BNO055)
+    // do not read position from IMU
+
+    // get joystick (x, y, z) -> remove y to project to get direction of
+    // movement. change player position by delta (x, 0, z).
+
+    // game rules
 }
