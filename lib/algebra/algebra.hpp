@@ -54,7 +54,7 @@ public:
     explicit Vector(const array<float, LENGTH>& v) : data(v) {}
 #endif
 
-    explicit Vector(std::initializer_list<float> ilist) {
+    Vector(std::initializer_list<float> ilist) {
         assert(ilist.size() == LENGTH);
         size_t i = 0;
         for (float x : ilist) data[i++] = x;
