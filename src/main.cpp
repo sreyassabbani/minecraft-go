@@ -1,7 +1,9 @@
-#include <Arduino.h>
 #include "../lib/game/GameState.h"
+#include <Arduino.h>
 
 GameState game;
+
+// init renderer here? or have game.render() ?
 
 void setup() {
     Serial.begin(115200);
@@ -18,7 +20,7 @@ void loop() {
     if (dt > 0.1f) dt = 0.1f;
 
     game.update(dt);
-    
+
     // Debug output
     static uint32_t lastPrint = 0;
     if (now - lastPrint > 1000) {
@@ -30,4 +32,12 @@ void loop() {
         Serial.println(game.player.position[2]);
         lastPrint = now;
     }
+
+    // update camera normal based on IMU (depends on BNO055)
+    // do not read position from IMU
+
+    // get joystick (x, y, z) -> remove y to project to get direction of
+    // movement. change player position by delta (x, 0, z).
+
+    // game rules
 }
