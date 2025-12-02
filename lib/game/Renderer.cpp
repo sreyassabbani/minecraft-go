@@ -360,6 +360,25 @@ void Renderer::extractFaces(const World& world, const Camera& cam, const Mat4& v
                         verts[2] = {x1, y0, z1}; verts[3] = {x0, y0, z1};
                     }
                     
+                    // Apply rotation (pitch) to see top of platform
+                    float angle = 0.5f; // ~30 degrees
+                    float cosA = cosf(angle);
+                    float sinA = sinf(angle);
+                    
+                    for(int i=0; i<4; i++) {
+                        // Rotate around X axis
+                        float ny = verts[i][1] * cosA - verts[i][2] * sinA;
+                        float nz = verts[i][1] * sinA + verts[i][2] * cosA;
+                        verts[i][1] = ny;
+                        verts[i][2] = nz;
+                        
+                        // Translate to camera space
+                        // Y offset 0.0f - raise camera viewpoint
+                        // Z offset +8.0f to be in front of camera
+                        verts[i][1] += 0.0f;
+                        verts[i][2] += 8.0f;
+                    }
+                    
                     // Assign color based on block type
                     if (block == DIRT) {
                         color = 0x79E0; // Brown
