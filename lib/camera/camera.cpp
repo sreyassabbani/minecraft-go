@@ -42,8 +42,10 @@ Mat4 Camera::getProjectionMatrix() const {
     float fFar = farPlane;
     float fFov = 1.0f / tanf(fovRad * 0.5f);
 
-    proj(0, 0) = fAspectRatio * fFov;
-    proj(1, 1) = fFov;
+    // Row-vector pipeline expects this transposed relative to column-vector
+    // formulations. Scale Y by aspect instead of X.
+    proj(0, 0) = fFov;
+    proj(1, 1) = fAspectRatio * fFov;
     proj(2, 2) = fFar / (fFar - fNear);
     proj(3, 2) = (-fFar * fNear) / (fFar - fNear);
     proj(2, 3) = 1.0f;

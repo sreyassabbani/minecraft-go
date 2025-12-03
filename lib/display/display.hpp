@@ -56,13 +56,13 @@ public:
         if (!tft_) {
             tft_ = new (&tftStorage_) ST7796S(pins_.cs, pins_.dc, pins_.rst);
         }
-        width_ = ST7796S_TFTWIDTH;
-        height_ = ST7796S_TFTHEIGHT;
-
         tft().begin(spiFreq);
         tft().setRotation(rotation);
         tft().setTextWrap(wrap);
         tft().fillScreen(clear.value);
+        // Query actual dimensions after rotation
+        width_ = tft().width();
+        height_ = tft().height();
     }
 
     void setPins(const Pins& pins) { pins_ = pins; }
