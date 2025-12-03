@@ -14,6 +14,8 @@ Renderer* renderer = nullptr;
 
 // init renderer here? or have game.render() ?
 
+// init renderer here? or have game.render() ?
+
 void setup() {
     Serial.begin(115200);
     // Initialize Display
