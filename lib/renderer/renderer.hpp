@@ -20,9 +20,6 @@ public:
     void render(const World& world, const Vec3& camPos,
                 const algebra::Quaternion& camOrientation);
 
-    // Test scene with single cube
-    void renderTestScene();
-
 private:
     display::Display& display;
     FaceList faceList;

@@ -9,8 +9,7 @@ void Renderer::render(const World& world, const Vec3& camPos,
     // Derive camera basis from player orientation so view follows head pose
     Vec3 forward =
         algebra::rotateVector(camOrientation, Vec3({ 0.0f, 0.0f, 1.0f }));
-    Vec3 up =
-        algebra::rotateVector(camOrientation, Vec3({ 0.0f, 1.0f, 0.0f }));
+    Vec3 up = algebra::rotateVector(camOrientation, Vec3({ 0.0f, 1.0f, 0.0f }));
 
     forward = algebra::normalizeOr(forward, Vec3({ 0.0f, 0.0f, 1.0f }));
     up = algebra::normalizeOr(up, Vec3({ 0.0f, 1.0f, 0.0f }));
@@ -71,103 +70,6 @@ void Renderer::render(const World& world, const Vec3& camPos,
     }
 }
 
-void Renderer::renderTestScene() {
-    // Camera positioned to look directly at cube
-    // Cube is at (0, 0, 4.5), camera at (0, 0, -3) looking forward
-    Camera cam(Vec3({ 0.0f, 0.0f, -3.0f }), Vec3({ 0.0f, 0.0f, 1.0f }), 70.0f,
-               1.5f, 0.1f, 100.0f);
-
-    // Get matrices
-    Mat4 view = cam.getViewMatrix();
-    Mat4 proj = cam.getProjectionMatrix();
-    Mat4 viewProj = view * proj; // row-vector convention: v * view * proj
-
-    Serial.println("=== renderTestScene ===");
-
-    // Clear screen
-    display.clear(display::Color::Black());
-
-    // Clear face list
-    faceList.clear();
-
-    // Define a cube further from camera (to avoid near-plane clipping)
-    // Cube will be at Z=4 to Z=5 (7-8 units from camera at Z=-3)
-    float x0 = -0.5f, x1 = 0.5f;
-    float y0 = -0.5f, y1 = 0.5f;
-    float z0 = 4.0f, z1 = 5.0f;
-
-    // Front face (+Z)
-    Vec3 frontVerts[4] = {
-        { x0, y0, z1 },
-        { x1, y0, z1 },
-        { x1, y1, z1 },
-        { x0, y1, z1 }
-    };
-    projectAndAddQuad(frontVerts, 0xF800, view, viewProj, cam); // Red
-
-    // Back face (-Z)
-    Vec3 backVerts[4] = {
-        { x1, y0, z0 },
-        { x0, y0, z0 },
-        { x0, y1, z0 },
-        { x1, y1, z0 }
-    };
-    projectAndAddQuad(backVerts, 0x07E0, view, viewProj, cam); // Green
-
-    // Right face (+X)
-    Vec3 rightVerts[4] = {
-        { x1, y0, z1 },
-        { x1, y0, z0 },
-        { x1, y1, z0 },
-        { x1, y1, z1 }
-    };
-    projectAndAddQuad(rightVerts, 0x001F, view, viewProj, cam); // Blue
-
-    // Left face (-X)
-    Vec3 leftVerts[4] = {
-        { x0, y0, z0 },
-        { x0, y0, z1 },
-        { x0, y1, z1 },
-        { x0, y1, z0 }
-    };
-    projectAndAddQuad(leftVerts, 0xFFE0, view, viewProj, cam); // Yellow
-
-    // Top face (+Y)
-    Vec3 topVerts[4] = {
-        { x0, y1, z1 },
-        { x1, y1, z1 },
-        { x1, y1, z0 },
-        { x0, y1, z0 }
-    };
-    projectAndAddQuad(topVerts, 0xF81F, view, viewProj, cam); // Magenta
-
-    // Bottom face (-Y)
-    Vec3 bottomVerts[4] = {
-        { x0, y0, z0 },
-        { x1, y0, z0 },
-        { x1, y0, z1 },
-        { x0, y0, z1 }
-    };
-    projectAndAddQuad(bottomVerts, 0x07FF, view, viewProj, cam); // Cyan
-
-    Serial.print("Face count: ");
-    Serial.println(faceList.count());
-
-    // Sort faces by depth
-    faceList.sortByDepth();
-
-    // Rasterize all faces
-    for (int i = 0; i < faceList.count(); i++) {
-        const Triangle& tri = faceList[i];
-        if (tri.visible) {
-            Raster::fillTriangle(display, tri.x[0], tri.y[0], tri.x[1],
-                                 tri.y[1], tri.x[2], tri.y[2], tri.color);
-        }
-    }
-
-    Serial.println("=== renderTestScene complete ===");
-}
-
 bool Renderer::shouldCullFace(const Vec3& normal, const Vec3& faceCenter,
                               const Vec3& cameraPos) {
     // Vector from face to camera
@@ -185,8 +87,8 @@ bool Renderer::shouldCullFace(const Vec3& normal, const Vec3& faceCenter,
 }
 
 bool Renderer::projectVertex(const Vec3& worldPos, const Mat4& view,
-                             const Mat4& viewProj, int16_t& outX,
-                             int16_t& outY, float& outZ) {
+                             const Mat4& viewProj, int16_t& outX, int16_t& outY,
+                             float& outZ) {
     // Transform to view space for depth/near-plane checks
     Vec4 viewPos = worldPos * view;
 

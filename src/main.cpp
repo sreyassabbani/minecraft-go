@@ -38,25 +38,21 @@ void loop() {
 
     if (dt > 0.1f) dt = 0.1f; // clamp large pauses
 
-    // Disable physics for now - freeze player at good viewing position
+    // Disable physics; drive camera/player manually in an orbit
     // game.update(dt);
 
-    // Set player to fixed position where they can see the world
-    static bool playerPositioned = false;
-    if (!playerPositioned) {
-        // Place player/camera outside the world looking inward (original spot)
-        game.player.position = Vec3({ 4.0f, 3.0f, -12.0f });
-        game.player.velocity = Vec3({ 0.0f, 0.0f, 0.0f });
+    // Orbit around the world center while looking at it
+    const Vec3 center = Vec3({ World::WIDTH * 0.5f, 1.5f, World::DEPTH * 0.5f });
+    const float radius = 8.0f;     // circle around the 10x10 world
+    const float height = 3.0f;     // keep above the ground
+    const float angularSpeed = 0.4f; // radians per second
+    const float angle = angularSpeed * (millis() / 1000.0f);
 
-        // Hard-code a look-at so the player faces the center of the current
-        // blocks
-        Vec3 target = Vec3({ World::WIDTH * 0.5f, 1.5f, World::DEPTH * 0.5f });
-        game.player.orientation = algebra::lookAt(game.player.position, target);
-
-        playerPositioned = true;
-
-        println("Camera placed in front of world");
-    }
+    game.player.position =
+        Vec3({ center[0] + cosf(angle) * radius, height,
+               center[2] + sinf(angle) * radius });
+    game.player.velocity = Vec3({ 0.0f, 0.0f, 0.0f });
+    game.player.orientation = algebra::lookAt(game.player.position, center);
 
     // Render full world (throttled for performance)
     static uint32_t lastRender = 0;
