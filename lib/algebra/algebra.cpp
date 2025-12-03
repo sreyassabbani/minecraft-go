@@ -1,21 +1,4 @@
 #include <algebra.hpp>
-
-#if defined(__AVR__) || defined(ARDUINO_ARCH_AVR)
-// Lightweight stubs for Uno testing (avoid heavy math deps)
-namespace algebra {
-Quaternion normalizeQuaternion(const Quaternion& /*q*/) {
-    return Quaternion { 1.0f, 0.0f, 0.0f, 0.0f };
-}
-
-Vector<3> rotateVector(const Quaternion& /*q*/, const Vector<3>& v) {
-    return v;
-}
-
-Vector<3> quaternionToEuler(const Quaternion& /*q*/) {
-    return Vector<3> { 0.0f, 0.0f, 0.0f };
-}
-} // namespace algebra
-#else
 #include <cmath>
 
 namespace algebra {
@@ -28,6 +11,58 @@ Quaternion normalizeQuaternion(const Quaternion& q) {
     if (norm <= 1e-6f) { return Quaternion { 1.0f, 0.0f, 0.0f, 0.0f }; }
     const float inv = 1.0f / norm;
     return Quaternion { q.w * inv, q.x * inv, q.y * inv, q.z * inv };
+}
+
+Vector<3> cross(const Vector<3>& a, const Vector<3>& b) {
+    return Vector<3> { a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
+                       a[0] * b[1] - a[1] * b[0] };
+}
+
+float length(const Vector<3>& v) {
+    return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+}
+
+Vector<3> normalize(const Vector<3>& v) {
+    const float len = length(v);
+    if (len < 1e-6f) { return Vector<3> { 0.0f, 0.0f, 0.0f }; }
+    const float inv = 1.0f / len;
+    return Vector<3> { v[0] * inv, v[1] * inv, v[2] * inv };
+}
+
+Vector<3> normalizeOr(const Vector<3>& v, const Vector<3>& fallback) {
+    const float len = length(v);
+    if (len < 1e-6f) { return fallback; }
+    const float inv = 1.0f / len;
+    return Vector<3> { v[0] * inv, v[1] * inv, v[2] * inv };
+}
+
+Vector<3> faceNormal(const Vector<3>& v0, const Vector<3>& v1,
+                     const Vector<3>& v2) {
+    return normalize(cross(v1 - v0, v2 - v0));
+}
+
+Quaternion makeYawPitch(float yaw, float pitch) {
+    const float hy = yaw * 0.5f;
+    const float hp = pitch * 0.5f;
+    const float cy = std::cos(hy);
+    const float sy = std::sin(hy);
+    const float cp = std::cos(hp);
+    const float sp = std::sin(hp);
+    return Quaternion { cy * cp, cy * sp, sy * cp, -sy * sp };
+}
+
+Quaternion lookAt(const Vector<3>& pos, const Vector<3>& target) {
+    Vector<3> dir { target[0] - pos[0], target[1] - pos[1], target[2] - pos[2] };
+    const float len =
+        std::sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]);
+    if (len < 1e-4f) { return Quaternion { 1.0f, 0.0f, 0.0f, 0.0f }; }
+    dir[0] /= len;
+    dir[1] /= len;
+    dir[2] /= len;
+
+    const float yaw = std::atan2(dir[0], dir[2]); // rotate around Y to face target
+    const float pitch = std::atan2(-dir[1], std::sqrt(dir[0] * dir[0] + dir[2] * dir[2]));
+    return makeYawPitch(yaw, pitch);
 }
 
 Vector<3> rotateVector(const Quaternion& q, const Vector<3>& v) {
@@ -62,4 +97,3 @@ Vector<3> quaternionToEuler(const Quaternion& q) {
     return Vector<3> { yaw, pitch, roll };
 }
 } // namespace algebra
-#endif

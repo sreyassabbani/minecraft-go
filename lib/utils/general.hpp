@@ -1,6 +1,8 @@
 #ifndef GENERAL_H
 #define GENERAL_H
 
+#include <cstdlib>
+
 #ifdef ARDUINO
 #include <Arduino.h>
 #else
@@ -8,6 +10,9 @@
 
 struct SerialShim {
     template <typename T> void print(const T& value) { std::cout << value; }
+    template <typename T> void println(const T& value) {
+        std::cout << value << std::endl;
+    }
     void println() { std::cout << std::endl; }
 };
 
@@ -39,7 +44,7 @@ inline void require(bool ok, const char* msg) {
 
 inline void require(bool ok, const char* er_msg, const char* ok_msg) {
     if (!ok) {
-        Serial.println("AHHH");
+        println("AHHH");
         println(er_msg);
         abort();
     } else println(ok_msg);

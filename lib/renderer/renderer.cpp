@@ -1,89 +1,74 @@
+#include <general.hpp>
 #include <math.h>
 #include <renderer.hpp>
 
 Renderer::Renderer(display::Display& disp) : display(disp) {}
 
-void Renderer::render(const World& world, const Player& player) {
-    // Setup camera - use simple forward direction like test cube
-    Vec3 lookDir = Vec3({ 0.0f, 0.0f, 1.0f }); // Looking forward
-    Camera cam(player.position, lookDir, 70.0f, 1.5f, 0.1f, 100.0f);
+void Renderer::render(const World& world, const Vec3& camPos,
+                      const algebra::Quaternion& camOrientation) {
+    // Derive camera basis from player orientation so view follows head pose
+    Vec3 forward =
+        algebra::rotateVector(camOrientation, Vec3({ 0.0f, 0.0f, 1.0f }));
+    Vec3 up =
+        algebra::rotateVector(camOrientation, Vec3({ 0.0f, 1.0f, 0.0f }));
+
+    forward = algebra::normalizeOr(forward, Vec3({ 0.0f, 0.0f, 1.0f }));
+    up = algebra::normalizeOr(up, Vec3({ 0.0f, 1.0f, 0.0f }));
+
+    float aspect = static_cast<float>(display.width()) /
+                   static_cast<float>(display.height());
+
+    Camera cam(camPos, forward, 70.0f, aspect, 0.1f, 100.0f);
+    cam.upDir = up;
 
     // Get view and projection matrices
     Mat4 view = cam.getViewMatrix();
     Mat4 proj = cam.getProjectionMatrix();
-    Mat4 viewProj = proj * view;
+    Mat4 viewProj = view * proj; // row-vector convention: v * view * proj
 
     // Clear screen
-    display.clear(display::Color::Black());
+    display.clear(display::Color::SkyBlue());
 
     // Clear face list
     faceList.clear();
 
-    Serial.println("--- Render Start ---");
-    Serial.print("Camera at: ");
-    Serial.print(cam.position[0]);
-    Serial.print(", ");
-    Serial.print(cam.position[1]);
-    Serial.print(", ");
-    Serial.println(cam.position[2]);
-
     // Extract visible faces from world
-    extractFaces(world, cam, viewProj);
+    extractFaces(world, cam, view, viewProj);
 
-    Serial.print("Faces extracted: ");
-    Serial.println(faceList.count());
+    // Debug: report face count
+    println("Faces extracted: ", faceList.count());
+    if (faceList.count() == 0) {
+        println("No faces extracted - check camera/view/projection");
+    }
 
     // Sort faces by depth
     faceList.sortByDepth();
 
     // Rasterize all faces
+    const int16_t screenW = display.width();
+    const int16_t screenH = display.height();
     int rendered = 0;
-    int onScreen = 0;
     for (int i = 0; i < faceList.count(); i++) {
         const Triangle& tri = faceList[i];
         if (tri.visible) {
-            // Check if on screen
-            bool isOnScreen = (tri.x[0] >= 0 && tri.x[0] < display.width() &&
-                               tri.y[0] >= 0 && tri.y[0] < display.height()) ||
-                              (tri.x[1] >= 0 && tri.x[1] < display.width() &&
-                               tri.y[1] >= 0 && tri.y[1] < display.height()) ||
-                              (tri.x[2] >= 0 && tri.x[2] < display.width() &&
-                               tri.y[2] >= 0 && tri.y[2] < display.height());
-
-            if (isOnScreen && onScreen < 3) {
-                Serial.print("OnScreen Tri: (");
-                Serial.print(tri.x[0]);
-                Serial.print(",");
-                Serial.print(tri.y[0]);
-                Serial.print(") (");
-                Serial.print(tri.x[1]);
-                Serial.print(",");
-                Serial.print(tri.y[1]);
-                Serial.print(") (");
-                Serial.print(tri.x[2]);
-                Serial.print(",");
-                Serial.print(tri.y[2]);
-                Serial.println(")");
-                onScreen++;
+            int16_t minX = tri.x[0], maxX = tri.x[0];
+            int16_t minY = tri.y[0], maxY = tri.y[0];
+            for (int v = 1; v < 3; ++v) {
+                if (tri.x[v] < minX) minX = tri.x[v];
+                if (tri.x[v] > maxX) maxX = tri.x[v];
+                if (tri.y[v] < minY) minY = tri.y[v];
+                if (tri.y[v] > maxY) maxY = tri.y[v];
+            }
+            if (maxX < 0 || minX >= screenW || maxY < 0 || minY >= screenH) {
+                continue; // triangle wholly off-screen
             }
 
             Raster::fillTriangle(display, tri.x[0], tri.y[0], tri.x[1],
                                  tri.y[1], tri.x[2], tri.y[2], tri.color);
 
-            // Simple wireframe effect: draw black outline
-            display.drawLine(tri.x[0], tri.y[0], tri.x[1], tri.y[1],
-                             display::Color::Black());
-            display.drawLine(tri.x[1], tri.y[1], tri.x[2], tri.y[2],
-                             display::Color::Black());
-            display.drawLine(tri.x[2], tri.y[2], tri.x[0], tri.y[0],
-                             display::Color::Black());
-
             rendered++;
         }
     }
-    Serial.print("Rendered triangles: ");
-    Serial.println(rendered);
-    Serial.println("--- Render Complete ---");
 }
 
 void Renderer::renderTestScene() {
@@ -95,7 +80,7 @@ void Renderer::renderTestScene() {
     // Get matrices
     Mat4 view = cam.getViewMatrix();
     Mat4 proj = cam.getProjectionMatrix();
-    Mat4 viewProj = proj * view;
+    Mat4 viewProj = view * proj; // row-vector convention: v * view * proj
 
     Serial.println("=== renderTestScene ===");
 
@@ -118,7 +103,7 @@ void Renderer::renderTestScene() {
         { x1, y1, z1 },
         { x0, y1, z1 }
     };
-    projectAndAddQuad(frontVerts, 0xF800, viewProj, cam); // Red
+    projectAndAddQuad(frontVerts, 0xF800, view, viewProj, cam); // Red
 
     // Back face (-Z)
     Vec3 backVerts[4] = {
@@ -127,7 +112,7 @@ void Renderer::renderTestScene() {
         { x0, y1, z0 },
         { x1, y1, z0 }
     };
-    projectAndAddQuad(backVerts, 0x07E0, viewProj, cam); // Green
+    projectAndAddQuad(backVerts, 0x07E0, view, viewProj, cam); // Green
 
     // Right face (+X)
     Vec3 rightVerts[4] = {
@@ -136,7 +121,7 @@ void Renderer::renderTestScene() {
         { x1, y1, z0 },
         { x1, y1, z1 }
     };
-    projectAndAddQuad(rightVerts, 0x001F, viewProj, cam); // Blue
+    projectAndAddQuad(rightVerts, 0x001F, view, viewProj, cam); // Blue
 
     // Left face (-X)
     Vec3 leftVerts[4] = {
@@ -145,7 +130,7 @@ void Renderer::renderTestScene() {
         { x0, y1, z1 },
         { x0, y1, z0 }
     };
-    projectAndAddQuad(leftVerts, 0xFFE0, viewProj, cam); // Yellow
+    projectAndAddQuad(leftVerts, 0xFFE0, view, viewProj, cam); // Yellow
 
     // Top face (+Y)
     Vec3 topVerts[4] = {
@@ -154,7 +139,7 @@ void Renderer::renderTestScene() {
         { x1, y1, z0 },
         { x0, y1, z0 }
     };
-    projectAndAddQuad(topVerts, 0xF81F, viewProj, cam); // Magenta
+    projectAndAddQuad(topVerts, 0xF81F, view, viewProj, cam); // Magenta
 
     // Bottom face (-Y)
     Vec3 bottomVerts[4] = {
@@ -163,7 +148,7 @@ void Renderer::renderTestScene() {
         { x1, y0, z1 },
         { x0, y0, z1 }
     };
-    projectAndAddQuad(bottomVerts, 0x07FF, viewProj, cam); // Cyan
+    projectAndAddQuad(bottomVerts, 0x07FF, view, viewProj, cam); // Cyan
 
     Serial.print("Face count: ");
     Serial.println(faceList.count());
@@ -183,51 +168,6 @@ void Renderer::renderTestScene() {
     Serial.println("=== renderTestScene complete ===");
 }
 
-Vec4 Renderer::multiplyMatrixVector(const Vec3& v, const Mat4& m) {
-    Vec4 result;
-    result[0] = v[0] * m(0, 0) + v[1] * m(1, 0) + v[2] * m(2, 0) + m(3, 0);
-    result[1] = v[0] * m(0, 1) + v[1] * m(1, 1) + v[2] * m(2, 1) + m(3, 1);
-    result[2] = v[0] * m(0, 2) + v[1] * m(1, 2) + v[2] * m(2, 2) + m(3, 2);
-    result[3] = v[0] * m(0, 3) + v[1] * m(1, 3) + v[2] * m(2, 3) + m(3, 3);
-    return result;
-}
-
-Vec4 Renderer::multiplyMatrixVector(const Vec4& v, const Mat4& m) {
-    Vec4 result;
-    result[0] =
-        v[0] * m(0, 0) + v[1] * m(1, 0) + v[2] * m(2, 0) + v[3] * m(3, 0);
-    result[1] =
-        v[0] * m(0, 1) + v[1] * m(1, 1) + v[2] * m(2, 1) + v[3] * m(3, 1);
-    result[2] =
-        v[0] * m(0, 2) + v[1] * m(1, 2) + v[2] * m(2, 2) + v[3] * m(3, 2);
-    result[3] =
-        v[0] * m(0, 3) + v[1] * m(1, 3) + v[2] * m(2, 3) + v[3] * m(3, 3);
-    return result;
-}
-
-Vec3 Renderer::computeNormal(const Vec3& v0, const Vec3& v1, const Vec3& v2) {
-    // Compute edges
-    Vec3 edge1 = v1 - v0;
-    Vec3 edge2 = v2 - v0;
-
-    // Cross product
-    Vec3 normal;
-    normal[0] = edge1[1] * edge2[2] - edge1[2] * edge2[1];
-    normal[1] = edge1[2] * edge2[0] - edge1[0] * edge2[2];
-    normal[2] = edge1[0] * edge2[1] - edge1[1] * edge2[0];
-
-    // Normalize
-    float len = sqrtf(normal[0] * normal[0] + normal[1] * normal[1] +
-                      normal[2] * normal[2]);
-    if (len > 0.0001f) {
-        normal[0] /= len;
-        normal[1] /= len;
-        normal[2] /= len;
-    }
-
-    return normal;
-}
-
 bool Renderer::shouldCullFace(const Vec3& normal, const Vec3& faceCenter,
                               const Vec3& cameraPos) {
     // Vector from face to camera
@@ -244,19 +184,31 @@ bool Renderer::shouldCullFace(const Vec3& normal, const Vec3& faceCenter,
     return dot <= 0.0f;
 }
 
-bool Renderer::projectVertex(const Vec3& worldPos, const Mat4& viewProj,
-                             int16_t& outX, int16_t& outY, float& outZ) {
-    // Transform to clip space
-    Vec4 clipPos = multiplyMatrixVector(worldPos, viewProj);
+bool Renderer::projectVertex(const Vec3& worldPos, const Mat4& view,
+                             const Mat4& viewProj, int16_t& outX,
+                             int16_t& outY, float& outZ) {
+    // Transform to view space for depth/near-plane checks
+    Vec4 viewPos = worldPos * view;
 
-    // Check if behind near plane
-    if (clipPos[3] < 0.1f) { return false; }
+    // Transform to clip space
+    Vec4 clipPos = worldPos * viewProj;
+
+    // Debug one block projection to see if it's culled
+    static bool loggedSample = false;
+    if (!loggedSample && fabs(worldPos[0] - 5.0f) < 0.1f &&
+        fabs(worldPos[1] - 1.0f) < 0.1f && fabs(worldPos[2] - 5.0f) < 0.1f) {
+        println("Sample block clip: (", clipPos[0], ",", clipPos[1], ",",
+                clipPos[2], ", W=", clipPos[3], ")");
+        loggedSample = true;
+    }
+
+    // Clip against near plane using clip-space W
+    if (clipPos[3] <= 0.0f) { return false; }
 
     // Perspective divide
     float invW = 1.0f / clipPos[3];
     float ndcX = clipPos[0] * invW;
     float ndcY = clipPos[1] * invW;
-    float ndcZ = clipPos[2] * invW;
 
     // Debug center block projection (approximate check)
     if (abs(worldPos[0] - 5.0f) < 0.1f && abs(worldPos[2]) < 0.1f) {
@@ -280,13 +232,14 @@ bool Renderer::projectVertex(const Vec3& worldPos, const Mat4& viewProj,
 
     outX = (int16_t)screenX;
     outY = (int16_t)screenY;
-    outZ = clipPos[3]; // Use W for depth (distance from camera)
+    outZ = viewPos[2]; // Use view-space Z for depth sorting
 
     return true;
 }
 
 void Renderer::projectAndAddQuad(const Vec3 verts[4], uint16_t color,
-                                 const Mat4& viewProj, const Camera& cam) {
+                                 const Mat4& view, const Mat4& viewProj,
+                                 const Camera& cam) {
     // Compute face center
     Vec3 center;
     center[0] = (verts[0][0] + verts[1][0] + verts[2][0] + verts[3][0]) * 0.25f;
@@ -294,7 +247,7 @@ void Renderer::projectAndAddQuad(const Vec3 verts[4], uint16_t color,
     center[2] = (verts[0][2] + verts[1][2] + verts[2][2] + verts[3][2]) * 0.25f;
 
     // Compute normal
-    Vec3 normal = computeNormal(verts[0], verts[1], verts[2]);
+    Vec3 normal = algebra::faceNormal(verts[0], verts[1], verts[2]);
 
     // Backface culling
     if (shouldCullFace(normal, center, cam.position)) { return; }
@@ -305,7 +258,7 @@ void Renderer::projectAndAddQuad(const Vec3 verts[4], uint16_t color,
     int validVerts = 0;
 
     for (int i = 0; i < 4; i++) {
-        if (projectVertex(verts[i], viewProj, screenX[i], screenY[i],
+        if (projectVertex(verts[i], view, viewProj, screenX[i], screenY[i],
                           depth[i])) {
             validVerts++;
         }
@@ -346,7 +299,7 @@ void Renderer::projectAndAddQuad(const Vec3 verts[4], uint16_t color,
 }
 
 void Renderer::extractFaces(const World& world, const Camera& cam,
-                            const Mat4& viewProj) {
+                            const Mat4& view, const Mat4& viewProj) {
     // Voxlap-style face extraction: only emit faces adjacent to air
     for (int x = 0; x < World::WIDTH; x++) {
         for (int y = 0; y < World::HEIGHT; y++) {
@@ -354,14 +307,9 @@ void Renderer::extractFaces(const World& world, const Camera& cam,
                 uint8_t block = world.getBlock(x, y, z);
                 if (block == AIR) continue;
 
-                // Apply offset to center the world
-                // World is 0-10. Center X at 0 (subtract 5)
-                // Move Y down so camera is "above" (subtract 2)
-                // Move Z forward but closer (add 2) - this makes blocks look
-                // bigger
-                float worldX = (float)x - 5.0f;
-                float worldY = (float)y - 2.0f;
-                float worldZ = (float)z + 2.0f;
+                float worldX = static_cast<float>(x);
+                float worldY = static_cast<float>(y);
+                float worldZ = static_cast<float>(z);
 
                 // Define vertices relative to block origin
                 float x0 = worldX, x1 = worldX + 1.0f;
@@ -427,25 +375,6 @@ void Renderer::extractFaces(const World& world, const Camera& cam,
                         verts[3] = { x0, y0, z1 };
                     }
 
-                    // Apply rotation (pitch) to see top of platform
-                    float angle = 0.5f; // ~30 degrees
-                    float cosA = cosf(angle);
-                    float sinA = sinf(angle);
-
-                    for (int i = 0; i < 4; i++) {
-                        // Rotate around X axis
-                        float ny = verts[i][1] * cosA - verts[i][2] * sinA;
-                        float nz = verts[i][1] * sinA + verts[i][2] * cosA;
-                        verts[i][1] = ny;
-                        verts[i][2] = nz;
-
-                        // Translate to camera space
-                        // Y offset 0.0f - raise camera viewpoint
-                        // Z offset +8.0f to be in front of camera
-                        verts[i][1] += 0.0f;
-                        verts[i][2] += 8.0f;
-                    }
-
                     // Assign color based on block type
                     if (block == DIRT) {
                         color = 0x79E0; // Brown
@@ -460,7 +389,7 @@ void Renderer::extractFaces(const World& world, const Camera& cam,
                     }
 
                     // Project and add quad
-                    projectAndAddQuad(verts, color, viewProj, cam);
+                    projectAndAddQuad(verts, color, view, viewProj, cam);
                 }
             }
         }

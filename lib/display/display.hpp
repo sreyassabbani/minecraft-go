@@ -26,6 +26,8 @@ struct Color {
     static constexpr Color Red() { return Color { 0xF800 }; }
     static constexpr Color Green() { return Color { 0x07E0 }; }
     static constexpr Color Blue() { return Color { 0x001F }; }
+    // Minecraft sky tint (more saturated so it doesn't wash out to white)
+    static constexpr Color SkyBlue() { return fromRGB(120, 170, 255); }
     static constexpr Color Gray() { return Color { 0x8410 }; }
 };
 
@@ -47,12 +49,10 @@ public:
         int8_t rst;
     };
 
-    explicit Display(
-        uint8_t rotation = 1, 
-        Color clear = Color::Black(),
-        bool wrap = true,
-        uint32_t spiFreq = 0
-    ) {
+    static constexpr uint32_t defaultSpiHz() { return 42000000UL; }
+
+    explicit Display(uint8_t rotation = 1, Color clear = Color::Black(),
+                     bool wrap = true, uint32_t spiFreq = defaultSpiHz()) {
         if (!tft_) {
             tft_ = new (&tftStorage_) ST7796S(pins_.cs, pins_.dc, pins_.rst);
         }
