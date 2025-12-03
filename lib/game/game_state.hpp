@@ -1,8 +1,7 @@
-#ifndef GAMESTATE_H
-#define GAMESTATE_H
+#pragma once
 
-#include "World.h"
-#include "Player.h"
+#include <player.hpp>
+#include <world.hpp>
 
 class GameState {
 public:
@@ -13,5 +12,3 @@ public:
 
     void update(float dt);
 };
-
-#endif

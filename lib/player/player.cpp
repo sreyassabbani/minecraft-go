@@ -1,36 +1,34 @@
-#include "Player.h"
 #include <math.h>
+#include <player.hpp>
 
 Player::Player() {
-    position = algebra::Vector<3>({5.0f, 10.0f, 5.0f}); // Start high up
-    velocity = algebra::Vector<3>({0.0f, 0.0f, 0.0f});
-    orientation = {1.0f, 0.0f, 0.0f, 0.0f}; // Identity quaternion
+    position = algebra::Vector<3>({ 5.0f, 10.0f, 5.0f }); // Start high up
+    velocity = algebra::Vector<3>({ 0.0f, 0.0f, 0.0f });
+    orientation = { 1.0f, 0.0f, 0.0f, 0.0f }; // Identity quaternion
 }
 
-void Player::applyGravity(float dt) {
-    velocity[1] -= 9.81f * dt;
-}
+void Player::applyGravity(float dt) { velocity[1] -= 9.81f * dt; }
 
 void Player::jump() {
-    // Simple jump, assuming on ground check is done elsewhere or allowed to air jump for now
-    // For better physics, check if on ground.
-    // For this step, let's just add upward velocity.
-    velocity[1] = 5.0f; 
+    // Simple jump, assuming on ground check is done elsewhere or allowed to air
+    // jump for now For better physics, check if on ground. For this step, let's
+    // just add upward velocity.
+    velocity[1] = 5.0f;
 }
 
 void Player::moveForward(float amount) {
     // Forward is +Z in local space, but we need to rotate by orientation.
     // Actually, usually Forward is -Z in OpenGL, but requirements say:
     // "forward/backward is orientation’s +Z"
-    
-    algebra::Vector<3> forward = algebra::Vector<3>({0.0f, 0.0f, 1.0f});
+
+    algebra::Vector<3> forward = algebra::Vector<3>({ 0.0f, 0.0f, 1.0f });
     forward = algebra::rotateVector(orientation, forward);
-    
+
     // Flatten forward vector to XZ plane for walking
     forward[1] = 0.0f;
-    
+
     // Normalize if length > 0
-    float len = sqrt(forward[0]*forward[0] + forward[2]*forward[2]);
+    float len = sqrt(forward[0] * forward[0] + forward[2] * forward[2]);
     if (len > 0.001f) {
         forward[0] /= len;
         forward[2] /= len;
@@ -41,11 +39,11 @@ void Player::moveForward(float amount) {
 
 void Player::moveRight(float amount) {
     // Right is +X
-    algebra::Vector<3> right = algebra::Vector<3>({1.0f, 0.0f, 0.0f});
+    algebra::Vector<3> right = algebra::Vector<3>({ 1.0f, 0.0f, 0.0f });
     right = algebra::rotateVector(orientation, right);
-    
+
     right[1] = 0.0f;
-    float len = sqrt(right[0]*right[0] + right[2]*right[2]);
+    float len = sqrt(right[0] * right[0] + right[2] * right[2]);
     if (len > 0.001f) {
         right[0] /= len;
         right[2] /= len;
@@ -56,8 +54,9 @@ void Player::moveRight(float amount) {
 
 bool Player::checkCollision(World& world, const algebra::Vector<3>& pos) {
     // Check AABB against blocks
-    // Player AABB: [pos.x - w/2, pos.x + w/2] x [pos.y, pos.y + h] x [pos.z - w/2, pos.z + w/2]
-    
+    // Player AABB: [pos.x - w/2, pos.x + w/2] x [pos.y, pos.y + h] x [pos.z -
+    // w/2, pos.z + w/2]
+
     float minX = pos[0] - width / 2.0f;
     float maxX = pos[0] + width / 2.0f;
     float minY = pos[1];
@@ -75,7 +74,8 @@ bool Player::checkCollision(World& world, const algebra::Vector<3>& pos) {
     for (int x = startX; x <= endX; ++x) {
         for (int y = startY; y <= endY; ++y) {
             for (int z = startZ; z <= endZ; ++z) {
-                if (world.inBounds(x, y, z) && world.isSolid(world.getBlock(x, y, z))) {
+                if (world.inBounds(x, y, z) &&
+                    world.isSolid(world.getBlock(x, y, z))) {
                     return true;
                 }
             }
@@ -89,7 +89,7 @@ void Player::updatePhysics(World& world, float dt) {
 
     // Apply velocity to position with collision detection
     // Separate axes for better collision response
-    
+
     // X axis
     algebra::Vector<3> nextPos = position;
     nextPos[0] += velocity[0] * dt;
@@ -117,7 +117,7 @@ void Player::updatePhysics(World& world, float dt) {
     } else {
         position[1] = nextPos[1];
     }
-    
+
     // Friction/Damping on XZ
     velocity[0] *= 0.9f;
     velocity[2] *= 0.9f;

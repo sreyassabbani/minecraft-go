@@ -26,6 +26,8 @@ struct Color {
     static constexpr Color Red() { return Color { 0xF800 }; }
     static constexpr Color Green() { return Color { 0x07E0 }; }
     static constexpr Color Blue() { return Color { 0x001F }; }
+    // Minecraft sky tint (more saturated so it doesn't wash out to white)
+    static constexpr Color SkyBlue() { return fromRGB(120, 170, 255); }
     static constexpr Color Gray() { return Color { 0x8410 }; }
 };
 
@@ -47,22 +49,20 @@ public:
         int8_t rst;
     };
 
-    explicit Display(
-        uint8_t rotation = 1, 
-        Color clear = Color::Black(),
-        bool wrap = true,
-        uint32_t spiFreq = 0
-    ) {
+    static constexpr uint32_t defaultSpiHz() { return 42000000UL; }
+
+    explicit Display(uint8_t rotation = 1, Color clear = Color::Black(),
+                     bool wrap = true, uint32_t spiFreq = defaultSpiHz()) {
         if (!tft_) {
             tft_ = new (&tftStorage_) ST7796S(pins_.cs, pins_.dc, pins_.rst);
         }
-        width_ = ST7796S_TFTWIDTH;
-        height_ = ST7796S_TFTHEIGHT;
-
         tft().begin(spiFreq);
         tft().setRotation(rotation);
         tft().setTextWrap(wrap);
         tft().fillScreen(clear.value);
+        // Query actual dimensions after rotation
+        width_ = tft().width();
+        height_ = tft().height();
     }
 
     void setPins(const Pins& pins) { pins_ = pins; }
@@ -87,6 +87,10 @@ public:
 
     void drawFastVLine(int16_t x, int16_t y, int16_t h, Color color) {
         tft().drawFastVLine(x, y, h, color.value);
+    }
+
+    void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, Color color) {
+        tft().drawLine(x0, y0, x1, y1, color.value);
     }
 
     void drawText(int16_t x, int16_t y, const char* text,
