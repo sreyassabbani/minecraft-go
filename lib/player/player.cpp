@@ -1,5 +1,11 @@
 #include <math.h>
 #include <player.hpp>
+#include <general.hpp>
+#include <Arduino.h>
+
+#define JOYSTICK_X A6
+#define JOYSTICK_Y A7
+#define JOYSTICK_BUTTON_PIN 53
 
 Player::Player(Imu* imu)
     : Player(imu, algebra::Vector<3>({ 4.5f, 1.05f, 4.5f })) {}
@@ -68,7 +74,22 @@ void Player::moveRight(float amount) {
         right[2] /= len;
     }
 
+    println("Moving right by amount: ", String(amount));
+
     position = position + right * (amount * 0.1f);
+}
+
+void Player::move() {
+    int jX = analogRead(JOYSTICK_X);
+    int jY = analogRead(JOYSTICK_Y);
+
+    println("Joystick Readings - X:", String(jX), " Y:", String(jY));
+    
+    float jX1 =( (float) jX - 512.0f) / 512.0f;
+    float jY1 =( (float) jY - 512.0f) / 512.0f;
+
+    moveForward(jY1);
+    moveRight(jX1);
 }
 
 bool Player::checkCollision(World& world, const algebra::Vector<3>& pos) {
