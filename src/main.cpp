@@ -4,6 +4,10 @@
 #include <math.h>
 #include <renderer.hpp>
 
+// int joystickX = 0;
+// int joystickY = 0;
+// int buttonState = 0;
+
 using Vec3 = algebra::Vector<3>;
 using display::screen;
 
@@ -30,6 +34,8 @@ void setup() {
     // delay(2000); // Show red square for 2 seconds
 
     println("Display test complete");
+
+    // pinMode(JOYSTICK_BUTTON_PIN, INPUT_PULLUP);
 }
 
 void loop() {
@@ -41,20 +47,20 @@ void loop() {
     if (dt > 0.1f) dt = 0.1f; // clamp large pauses
 
     // Disable physics; drive camera/player manually in an orbit
-    // game.update(dt);
+    game.update(dt);
 
     // Orbit around the world center while looking at it
-    const Vec3 center = Vec3({ World::WIDTH * 0.5f, 1.5f, World::DEPTH * 0.5f });
-    const float radius = 8.0f;     // circle around the 10x10 world
-    const float height = 3.0f;     // keep above the ground
-    const float angularSpeed = 0.4f; // radians per second
-    const float angle = angularSpeed * (millis() / 1000.0f);
+    // const Vec3 center = Vec3({ World::WIDTH * 0.5f, 1.5f, World::DEPTH * 0.5f });
+    // const float radius = 8.0f;     // circle around the 10x10 world
+    // const float height = 3.0f;     // keep above the ground
+    // const float angularSpeed = 0.4f; // radians per second
+    // const float angle = angularSpeed * (millis() / 1000.0f);
 
-    game.player.position =
-        Vec3({ center[0] + cosf(angle) * radius, height,
-               center[2] + sinf(angle) * radius });
-    game.player.velocity = Vec3({ 0.0f, 0.0f, 0.0f });
-    game.player.orientation = algebra::lookAt(game.player.position, center);
+    // game.player.position =
+    //     Vec3({ center[0] + cosf(angle) * radius, height,
+    //            center[2] + sinf(angle) * radius });
+    // game.player.velocity = Vec3({ 0.0f, 0.0f, 0.0f });
+    // game.player.orientation = algebra::lookAt(game.player.position, center);
 
     // Render full world (throttled for performance)
     static uint32_t lastRender = 0;

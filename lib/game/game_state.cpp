@@ -5,4 +5,9 @@ GameState::GameState() {
     // Player is initialized in its own constructor
 }
 
-void GameState::update(float dt) { player.updatePhysics(world, dt); }
+void GameState::update(float dt) {
+    player.updatePhysics(world, dt); 
+    
+    
+    player.move();
+}
