@@ -1,14 +1,17 @@
 #pragma once
 
 #include <player.hpp>
+#include <renderer.hpp>
 #include <world.hpp>
 
 class GameState {
 public:
     World world;
-    Player player;
+    Player& player;
+    Renderer& renderer;
 
-    GameState();
+    GameState(Renderer& renderer, Player& player);
 
     void update(float dt);
+    void render();
 };
