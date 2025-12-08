@@ -1,9 +1,11 @@
 #include <Arduino.h>
+#include <display.hpp>
 #include <game_state.hpp>
 #include <general.hpp>
-#include <math.h>
 #include <renderer.hpp>
 
+#include <bno085.hpp>
+using ActiveImu = Bno085Imu;
 // int joystickX = 0;
 // int joystickY = 0;
 // int buttonState = 0;
@@ -11,28 +13,37 @@
 using Vec3 = algebra::Vector<3>;
 using display::screen;
 
-GameState game;
-// Renderer will be initialized in setup or globally if display is ready.
-// Display is a singleton via screen().
-Renderer* renderer = nullptr;
+ActiveImu imu;
+Player player(&imu);
 
-// init renderer here? or have game.render() ?
-
-// init renderer here? or have game.render() ?
+display::Display* displayPtr = nullptr;
+Renderer* rendererPtr = nullptr;
+GameState* gamePtr = nullptr;
 
 void setup() {
     Serial.begin(115200);
-    // Initialize Display
+    println("[Main] Starting with BNO085 IMU");
 
-    renderer = new Renderer(screen());
+    imu.begin();
 
-    println("Minecraft Go Initialized");
+    if (!imu.isInitialized()) {
+        println("[Main] BNO085 not responding; skipping IMU prints and using "
+                "zero pose");
+    }
 
-    // Test display by drawing a rectangle
-    // println("Testing display...");
-    // screen().fillRect(100, 100, 100, 100, display::Color::Red());
-    // delay(2000); // Show red square for 2 seconds
+    if (!displayPtr)
+        displayPtr = &display::screen(); // initialize display hardware now
+    println("[Main] Display dimensions:", displayPtr->width(), "x",
+            displayPtr->height());
 
+    rendererPtr = new Renderer(*displayPtr);
+    gamePtr = new GameState(*rendererPtr, player);
+
+    // Place player near world center at a safe height on the floor
+    player.position = algebra::Vector<3>({ 3.0f, 5.05f, 4.0f });
+    player.velocity = algebra::Vector<3>({ 0.0f, 0.0f, 0.0f });
+    println("[Main] Spawned player at:", player.position[0], ",",
+            player.position[1], ",", player.position[2]);
     println("Display test complete");
 
     // pinMode(JOYSTICK_BUTTON_PIN, INPUT_PULLUP);
@@ -46,6 +57,21 @@ void loop() {
 
     if (dt > 0.1f) dt = 0.1f; // clamp large pauses
 
+    imu.update();
+
+    // Periodic IMU debug
+    static uint32_t lastImuPrint = 0;
+    if (imu.isInitialized() && now - lastImuPrint > 200) {
+        const auto gravity = imu.getGravityVector();
+        const auto accel = imu.getLinearAcceleration();
+        const auto euler = imu.getOrientationEuler();
+        println("[Main] gravity (m/s^2):", gravity[0], gravity[1], gravity[2]);
+        println("[Main] linear accel (m/s^2):", accel[0], accel[1], accel[2]);
+        println("[Main] yaw/pitch/roll (rad):", euler[0], euler[1], euler[2]);
+        println("----");
+        println("Player pos (m):", player.position[0], player.position[1],
+                player.position[2]);
+        lastImuPrint = now;
     // Disable physics; drive camera/player manually in an orbit
     game.update(dt);
 
@@ -72,23 +98,6 @@ void loop() {
         lastRender = now;
     }
 
-    // Debug output
-    static uint32_t lastPrint = 0;
-    if (now - lastPrint > 1000) {
-        println("Player Pos:", game.player.position[0], ",",
-                game.player.position[1], ",", game.player.position[2]);
-
-        // FPS calculation could go here
-        println("FPS:", 1.0f / dt);
-
-        lastPrint = now;
-    }
-
-    // update camera normal based on IMU (depends on BNO085)
-    // do not read position from IMU
-
-    // get joystick (x, y, z) -> remove y to project to get direction of
-    // movement. change player position by delta (x, 0, z).
-
-    // game rules
+    // Update physics and render via GameState
+    if (rendererPtr && gamePtr) { gamePtr->update(dt); }
 }
