@@ -17,4 +17,8 @@ public:
     getOrientation(const algebra::Quaternion& current) const = 0;
     virtual algebra::Vector<3> getPosition() const = 0;
     virtual algebra::Vector<3> getVelocity() const = 0;
+
+    // Optional hint for consumers that only want to override orientation when
+    // the IMU has delivered a valid estimate.
+    virtual bool hasOrientation() const { return true; }
 };

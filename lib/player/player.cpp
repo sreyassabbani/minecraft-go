@@ -2,16 +2,23 @@
 #include <player.hpp>
 
 Player::Player(Imu* imu)
-    : Player(imu, algebra::Vector<3>({ 5.0f, 10.0f, 5.0f })) {}
+    : Player(imu, algebra::Vector<3>({ 4.5f, 1.05f, 4.5f })) {}
 
 Player::Player(Imu* imu, algebra::Vector<3> startPos)
     : orientation { 1.0f, 0.0f, 0.0f, 0.0f }, imu(imu), position(startPos),
-      velocity(algebra::Vector<3>({ 0.0f, 0.0f, 0.0f })) {}
+      velocity(algebra::Vector<3>({ 0.0f, 0.0f, 0.0f })) {
+    // Face the center of the world by default so the camera isn’t pointed at
+    // the sky/ground before IMU data arrives.
+    const algebra::Vector<3> target {
+        World::WIDTH * 0.5f, 1.5f, World::DEPTH * 0.5f
+    };
+    orientation = algebra::lookAt(position, target);
+}
 
 void Player::applyGravity(float dt) { velocity[1] -= 9.81f * dt; }
 
 algebra::Quaternion Player::getOrientation() {
-    if (imu) {
+    if (imu && imu->hasOrientation()) {
         orientation = imu->getOrientation(orientation);
     }
     return orientation;
@@ -124,10 +131,24 @@ void Player::updatePhysics(World& world, float dt) {
     nextPos = position;
     nextPos[1] += velocity[1] * dt;
     if (checkCollision(world, nextPos)) {
+        if (velocity[1] < 0.0f) {
+            // Snap to just above the block we hit to avoid sinking
+            position[1] = std::max(0.0f, floorf(position[1]) + 0.001f);
+        }
         velocity[1] = 0;
-        // If falling and hit ground, stop
     } else {
+        // Prevent tunneling below the world floor
+        if (nextPos[1] < 0.0f) {
+            nextPos[1] = 0.0f;
+            velocity[1] = 0.0f;
+        }
         position[1] = nextPos[1];
+    }
+
+    // Keep player above a minimum Y of 2
+    if (position[1] < 2.0f) {
+        position[1] = 2.0f;
+        if (velocity[1] < 0.0f) velocity[1] = 0.0f;
     }
 
     // Friction/Damping on XZ

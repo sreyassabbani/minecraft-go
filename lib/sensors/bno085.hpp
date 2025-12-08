@@ -22,6 +22,9 @@ public:
     getOrientation(const algebra::Quaternion& current) const override;
     algebra::Vector<3> getPosition() const override;
     algebra::Vector<3> getVelocity() const override;
+    bool hasOrientation() const override {
+        return initialized && eventCount > 0 && referenceSet;
+    }
     bool isInitialized() const { return initialized; }
 
 private:
@@ -36,6 +39,8 @@ private:
     uint32_t lastEventMs = 0;
     uint32_t lastNoEventLogMs = 0;
     uint32_t eventCount = 0;
+    bool referenceSet = false;
+    algebra::Quaternion reference { 1.0f, 0.0f, 0.0f, 0.0f };
 
     algebra::Quaternion q { 1.0f, 0.0f, 0.0f, 0.0f };
     algebra::Vector<3> linearAccel { 0.0f, 0.0f, 0.0f };

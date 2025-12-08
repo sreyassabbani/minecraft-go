@@ -3,13 +3,31 @@
 
 namespace {
 constexpr uint32_t kReportIntervalUs = 10000; // 100 Hz
+
+algebra::Quaternion invert(const algebra::Quaternion& q) {
+    const float norm2 = q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z;
+    if (norm2 <= 1e-6f) { return algebra::Quaternion { 1.0f, 0.0f, 0.0f, 0.0f }; }
+    const float inv = 1.0f / norm2;
+    return algebra::Quaternion { q.w * inv, -q.x * inv, -q.y * inv, -q.z * inv };
+}
+
+algebra::Quaternion multiply(const algebra::Quaternion& a,
+                             const algebra::Quaternion& b) {
+    return algebra::Quaternion { a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
+                                 a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+                                 a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+                                 a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w };
+}
 }
 
 Bno085Imu::Bno085Imu() = default;
 
 bool Bno085Imu::tryBegin(TwoWire& bus, uint8_t addr) {
+    println("[BNO] Probing bus at 0x", addr, " @100kHz (no INT/RST pins)");
+    bus.setClock(100000);
+    if (bno.begin_I2C(addr, &bus)) { return true; }
+    println("[BNO] Retry at 400kHz");
     bus.setClock(400000);
-    println("[BNO] Probing bus at 0x", addr);
     return bno.begin_I2C(addr, &bus);
 }
 
@@ -26,38 +44,26 @@ void Bno085Imu::scanI2cBus(TwoWire& bus, const char* busName) {
 
 void Bno085Imu::begin() {
     Wire.begin();
-    Wire1.begin();
-    Wire.setClock(400000);
-    Wire1.setClock(400000);
+    Wire.setClock(100000);
     delay(50); // give sensor time to boot
 
     scanI2cBus(Wire, "Wire");
-    scanI2cBus(Wire1, "Wire1");
 
     const uint8_t addrPrimary = 0x4A;
     const uint8_t addrAlt = 0x4B;
 
     println("[BNO] Probing Wire at 0x", addrPrimary, " then 0x", addrAlt);
 
-    initialized = bno.begin_I2C(addrPrimary, &Wire);
+    initialized = tryBegin(Wire, addrPrimary);
+    wire = &Wire;
     if (!initialized) {
         println("[BNO] Addr 0x", addrPrimary,
                 " not responding; trying alt address 0x", addrAlt);
-        initialized = bno.begin_I2C(addrAlt, &Wire);
+        initialized = tryBegin(Wire, addrAlt);
     }
 
     if (!initialized) {
-        println("[BNO] Trying Wire1 at 0x", addrPrimary, " then 0x", addrAlt);
-        initialized = bno.begin_I2C(addrPrimary, &Wire1);
-        if (!initialized) {
-            println("[BNO] Addr 0x", addrPrimary,
-                    " not responding; trying alt address 0x", addrAlt);
-            initialized = bno.begin_I2C(addrAlt, &Wire1);
-        }
-    }
-
-    if (!initialized) {
-        println("[BNO] Neither address responded on either bus; check wiring/ADR pin/3V3 power");
+        println("[BNO] Neither address responded on Wire; check wiring/ADR pin/3V3 power");
         return;
     }
 
@@ -97,6 +103,11 @@ void Bno085Imu::update() {
             const auto& r = sensorValue.un.gameRotationVector;
             q = algebra::normalizeQuaternion(
                 algebra::Quaternion { r.real, r.i, r.j, r.k });
+            if (!referenceSet) {
+                reference = q;
+                referenceSet = true;
+                println("[BNO] Orientation zeroed to current pose");
+            }
             break;
         }
         case SH2_LINEAR_ACCELERATION: {
@@ -144,7 +155,8 @@ algebra::Vector<3> Bno085Imu::getOrientationEuler() const {
 algebra::Quaternion
 Bno085Imu::getOrientation(const algebra::Quaternion& current) const {
     (void)current;
-    return q;
+    if (!referenceSet) return q;
+    return algebra::normalizeQuaternion(multiply(q, invert(reference)));
 }
 
 algebra::Vector<3> Bno085Imu::getPosition() const { return position; }

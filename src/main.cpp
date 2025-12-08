@@ -32,6 +32,12 @@ void setup() {
 
     rendererPtr = new Renderer(*displayPtr);
     gamePtr = new GameState(*rendererPtr, player);
+
+    // Place player near world center at a safe height on the floor
+    player.position = algebra::Vector<3>({ 3.0f, 5.05f, 4.0f });
+    player.velocity = algebra::Vector<3>({ 0.0f, 0.0f, 0.0f });
+    println("[Main] Spawned player at:", player.position[0], ",",
+            player.position[1], ",", player.position[2]);
 }
 
 void loop() {
@@ -46,7 +52,7 @@ void loop() {
 
     // Periodic IMU debug
     static uint32_t lastImuPrint = 0;
-    if (imu.isInitialized() && now - lastImuPrint > 100) {
+    if (imu.isInitialized() && now - lastImuPrint > 200) {
         const auto gravity = imu.getGravityVector();
         const auto accel = imu.getLinearAcceleration();
         const auto euler = imu.getOrientationEuler();
@@ -54,17 +60,11 @@ void loop() {
         println("[Main] linear accel (m/s^2):", accel[0], accel[1], accel[2]);
         println("[Main] yaw/pitch/roll (rad):", euler[0], euler[1], euler[2]);
         println("----");
+        println("Player pos (m):", player.position[0], player.position[1],
+                player.position[2]);
         lastImuPrint = now;
     }
 
-    // Drive demo pose from IMU data (keeps renderer exercised)
-    player.position = imu.getPosition();
-    player.velocity = imu.getVelocity();
-
-    static uint32_t lastRender = 0;
-    if (rendererPtr && gamePtr &&
-        now - lastRender > 50) { // Render every 100ms (10 FPS)
-        gamePtr->render();
-        lastRender = now;
-    }
+    // Update physics and render via GameState
+    if (rendererPtr && gamePtr) { gamePtr->update(dt); }
 }

@@ -25,6 +25,7 @@ public:
     Vector<3> getGravityVector() const;
     Vector<3> getPosition() const override;
     Vector<3> getVelocity() const override;
+    bool hasOrientation() const override { return true; }
 
 private:
     Adafruit_MPU6050 mpu;
