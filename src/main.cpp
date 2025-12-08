@@ -1,35 +1,37 @@
 #include <Arduino.h>
+#include <display.hpp>
 #include <game_state.hpp>
 #include <general.hpp>
-#include <math.h>
 #include <renderer.hpp>
 
+// #define USE_DEMO_IMU
+
+#ifdef USE_DEMO_IMU
+#include <demo.hpp>
+using ActiveImu = DemoImu;
+#else
+#include <mpu6050.hpp>
+using ActiveImu = Mpu6050Imu;
+#endif
+
 using Vec3 = algebra::Vector<3>;
-using display::screen;
 
-GameState game;
-// Renderer will be initialized in setup or globally if display is ready.
-// Display is a singleton via screen().
-Renderer* renderer = nullptr;
+ActiveImu imu;
+Player player(&imu);
+Renderer renderer(display::screen());
 
-// init renderer here? or have game.render() ?
-
-// init renderer here? or have game.render() ?
+GameState game(renderer, player);
 
 void setup() {
     Serial.begin(115200);
-    // Initialize Display
 
-    renderer = new Renderer(screen());
-
+    imu.begin();
+#ifdef USE_DEMO_IMU
+    println("[Main] Running with DemoImu (orbiting pose)");
+#else
+    println("[Main] Running with MPU6050");
+#endif
     println("Minecraft Go Initialized");
-
-    // Test display by drawing a rectangle
-    // println("Testing display...");
-    // screen().fillRect(100, 100, 100, 100, display::Color::Red());
-    // delay(2000); // Show red square for 2 seconds
-
-    println("Display test complete");
 }
 
 void loop() {
@@ -40,29 +42,38 @@ void loop() {
 
     if (dt > 0.1f) dt = 0.1f; // clamp large pauses
 
-    // Disable physics; drive camera/player manually in an orbit
-    // game.update(dt);
+    imu.update();
 
-    // Orbit around the world center while looking at it
-    const Vec3 center = Vec3({ World::WIDTH * 0.5f, 1.5f, World::DEPTH * 0.5f });
-    const float radius = 8.0f;     // circle around the 10x10 world
-    const float height = 3.0f;     // keep above the ground
-    const float angularSpeed = 0.4f; // radians per second
-    const float angle = angularSpeed * (millis() / 1000.0f);
-
-    game.player.position =
-        Vec3({ center[0] + cosf(angle) * radius, height,
-               center[2] + sinf(angle) * radius });
-    game.player.velocity = Vec3({ 0.0f, 0.0f, 0.0f });
-    game.player.orientation = algebra::lookAt(game.player.position, center);
+#ifdef USE_DEMO_IMU
+    // Drive the player pose from the demo IMU for hardware-free testing
+    game.player.position = imu.getPosition();
+    game.player.velocity = imu.getVelocity();
+#else
+    // Periodic IMU debug (real hardware)
+    static uint32_t lastImuPrint = 0;
+    if (now - lastImuPrint > 500) {
+        const auto gravity = imu.getGravityVector();
+        const auto euler = imu.getOrientationEuler();
+        Serial.print("[Main] a (m/s^2): ");
+        Serial.print(gravity[0]);
+        Serial.print(", ");
+        Serial.print(gravity[1]);
+        Serial.print(", ");
+        Serial.print(gravity[2]);
+        Serial.print(" | yaw/pitch/roll (rad): ");
+        Serial.print(euler[0]);
+        Serial.print(", ");
+        Serial.print(euler[1]);
+        Serial.print(", ");
+        Serial.println(euler[2]);
+        lastImuPrint = now;
+    }
+#endif
 
     // Render full world (throttled for performance)
     static uint32_t lastRender = 0;
     if (now - lastRender > 100) { // Render every 100ms (10 FPS)
-        if (renderer) {
-            renderer->render(game.world, game.player.position,
-                             game.player.orientation);
-        }
+        game.render();
         lastRender = now;
     }
 
