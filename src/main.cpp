@@ -1,4 +1,20 @@
 #include <Arduino.h>
+#include <bno085.hpp>
+#include <general.hpp>
+
+// Minimal BNO085 bring-up: read fused orientation and accel, print to serial.
+
+Bno085Imu imu;
+
+void setup() {
+    Serial.begin(115200);
+    println("[Main] BNO085 bring-up (println-only)");
+
+    imu.begin();
+    println("[Main] BNO085 init done");
+}
+
+void loop() {
 #include <display.hpp>
 #include <game_state.hpp>
 #include <general.hpp>
@@ -130,21 +146,19 @@ void loop() {
 
     // Debug output
     static uint32_t lastPrint = 0;
-    if (now - lastPrint > 1000) {
-        println("Player Pos:", game.player.position[0], ",",
-                game.player.position[1], ",", game.player.position[2]);
+    imu.update();
 
-        // FPS calculation could go here
-        println("FPS:", 1.0f / dt);
+    uint32_t now = millis();
+    if (now - lastPrint >= 100) {
+        const auto gravity = imu.getGravityVector();
+        const auto accel = imu.getLinearAcceleration();
+        const auto euler = imu.getOrientationEuler();
+
+        println("[Main] gravity (m/s^2):", gravity[0], gravity[1], gravity[2]);
+        println("[Main] linear accel (m/s^2):", accel[0], accel[1], accel[2]);
+        println("[Main] yaw/pitch/roll (rad):", euler[0], euler[1], euler[2]);
+        println("----");
 
         lastPrint = now;
     }
-
-    // update camera normal based on IMU (depends on BNO085)
-    // do not read position from IMU
-
-    // get joystick (x, y, z) -> remove y to project to get direction of
-    // movement. change player position by delta (x, 0, z).
-
-    // game rules
 }

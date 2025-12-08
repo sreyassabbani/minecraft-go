@@ -1,3 +1,4 @@
+#include <Wire.h>
 #include <bno085.hpp>
 
 namespace {
@@ -8,22 +9,53 @@ Bno085Imu::Bno085Imu() = default;
 
 void Bno085Imu::begin() {
     Wire.begin();
-    require(bno.begin_I2C(), "Failed to find BNO085 chip", "BNO085 Found!");
+    delay(50); // give sensor time to boot
+
+    const uint8_t addrPrimary = 0x4A;
+    const uint8_t addrAlt = 0x4B;
+
+    println("[BNO] Probing at 0x", addrPrimary, " then 0x", addrAlt);
+
+    initialized = bno.begin_I2C(addrPrimary);
+    if (!initialized) {
+        println("[BNO] Addr 0x", addrPrimary,
+                " not responding; trying alt address 0x", addrAlt);
+        initialized = bno.begin_I2C(addrAlt);
+    }
+
+    require(initialized, "Failed to find BNO085 chip", "BNO085 Found!");
 
     configureReports();
     println("[BNO] Reports configured");
 }
 
 void Bno085Imu::configureReports() {
-    // Prefer GAME_ROTATION_VECTOR (no magnetometer) to avoid heading drift
-    bno.enableReport(SH2_GAME_ROTATION_VECTOR, kReportIntervalUs);
-    bno.enableReport(SH2_LINEAR_ACCELERATION, kReportIntervalUs);
-    bno.enableReport(SH2_GRAVITY, kReportIntervalUs);
+    // Prefer game rotation vector (no magnetometer) for stable heading
+    require(bno.enableReport(SH2_GAME_ROTATION_VECTOR, kReportIntervalUs),
+            "BNO: failed to enable GAME_ROTATION_VECTOR");
+    require(bno.enableReport(SH2_LINEAR_ACCELERATION, kReportIntervalUs),
+            "BNO: failed to enable LINEAR_ACCELERATION");
+    require(bno.enableReport(SH2_GRAVITY, kReportIntervalUs),
+            "BNO: failed to enable GRAVITY");
+
+    lastEventMs = millis();
+    lastNoEventLogMs = 0;
+    eventCount = 0;
 }
 
 void Bno085Imu::update() {
-    // Consume all pending sensor events
+    if (!initialized) return;
+
+    if (bno.wasReset()) {
+        println("[BNO] Detected reset, reconfiguring reports");
+        configureReports();
+    }
+
+    bool gotEvent = false;
     while (bno.getSensorEvent(&sensorValue)) {
+        gotEvent = true;
+        lastEventMs = millis();
+        ++eventCount;
         switch (sensorValue.sensorId) {
         case SH2_GAME_ROTATION_VECTOR: {
             const auto& r = sensorValue.un.gameRotationVector;
@@ -33,7 +65,7 @@ void Bno085Imu::update() {
         }
         case SH2_LINEAR_ACCELERATION: {
             const auto& a = sensorValue.un.linearAcceleration;
-            acceleration = algebra::Vector<3> { a.x, a.y, a.z };
+            linearAccel = algebra::Vector<3> { a.x, a.y, a.z };
             break;
         }
         case SH2_GRAVITY: {
@@ -41,14 +73,33 @@ void Bno085Imu::update() {
             gravity = algebra::Vector<3> { g.x, g.y, g.z };
             break;
         }
-        default: break;
+        default:
+            break;
+        }
+
+        if (eventCount <= 5) {
+            println("[BNO] Event ", sensorValue.sensorId,
+                    " | q:", q.w, q.x, q.y, q.z, " | g:", gravity[0],
+                    gravity[1], gravity[2], " | la:", linearAccel[0],
+                    linearAccel[1], linearAccel[2]);
+        }
+    }
+
+    if (!gotEvent) {
+        const uint32_t now = millis();
+        if (lastEventMs == 0) lastEventMs = now;
+        if (now - lastEventMs > 500 && now - lastNoEventLogMs > 1000) {
+            println("[BNO] No sensor events for ", (now - lastEventMs), " ms");
+            lastNoEventLogMs = now;
         }
     }
 }
 
 algebra::Vector<3> Bno085Imu::getLinearAcceleration() const {
-    return acceleration;
+    return linearAccel;
 }
+
+algebra::Vector<3> Bno085Imu::getGravityVector() const { return gravity; }
 
 algebra::Vector<3> Bno085Imu::getOrientationEuler() const {
     return algebra::quaternionToEuler(q);
@@ -59,9 +110,3 @@ Bno085Imu::getOrientation(const algebra::Quaternion& current) const {
     (void)current;
     return q;
 }
-
-algebra::Vector<3> Bno085Imu::getPosition() const { return position; }
-
-algebra::Vector<3> Bno085Imu::getVelocity() const { return velocity; }
-
-algebra::Vector<3> Bno085Imu::getGravityVector() const { return gravity; }

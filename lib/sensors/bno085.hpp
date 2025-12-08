@@ -4,33 +4,32 @@
 #include <Arduino.h>
 #include <algebra.hpp>
 #include <general.hpp>
-#include <imu_sensor.hpp>
 
-class Bno085Imu : public Imu {
+// Minimal BNO085 wrapper for fused orientation + acceleration readings.
+class Bno085Imu {
 public:
     Bno085Imu();
 
-    void begin() override;
-    void update() override;
+    void begin();
+    void update();
 
-    algebra::Vector<3> getLinearAcceleration() const override;
-    algebra::Vector<3> getOrientationEuler() const override;
-    algebra::Quaternion
-    getOrientation(const algebra::Quaternion& current) const override;
-    algebra::Vector<3> getPosition() const override;
-    algebra::Vector<3> getVelocity() const override;
-
+    algebra::Vector<3> getLinearAcceleration() const;
     algebra::Vector<3> getGravityVector() const;
+    algebra::Vector<3> getOrientationEuler() const;
+    algebra::Quaternion
+    getOrientation(const algebra::Quaternion& current) const;
 
 private:
     void configureReports();
 
     Adafruit_BNO08x bno;
     sh2_SensorValue_t sensorValue {};
+    bool initialized = false;
+    uint32_t lastEventMs = 0;
+    uint32_t lastNoEventLogMs = 0;
+    uint32_t eventCount = 0;
 
     algebra::Quaternion q { 1.0f, 0.0f, 0.0f, 0.0f };
-    algebra::Vector<3> acceleration { 0.0f, 0.0f, 0.0f };
+    algebra::Vector<3> linearAccel { 0.0f, 0.0f, 0.0f };
     algebra::Vector<3> gravity { 0.0f, 0.0f, 0.0f };
-    algebra::Vector<3> position { 0.0f, 0.0f, 0.0f };
-    algebra::Vector<3> velocity { 0.0f, 0.0f, 0.0f };
 };
