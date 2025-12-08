@@ -27,6 +27,7 @@ public:
     void moveForward(float amount);
     void moveRight(float amount);
     void updatePhysics(World& world, float dt);
+    void move();
 
 private:
     void resolveCollisions(World& world, algebra::Vector<3>& vel, float dt);

@@ -6,6 +6,12 @@
 
 #include <bno085.hpp>
 using ActiveImu = Bno085Imu;
+// int joystickX = 0;
+// int joystickY = 0;
+// int buttonState = 0;
+
+using Vec3 = algebra::Vector<3>;
+using display::screen;
 
 ActiveImu imu;
 Player player(&imu);
@@ -38,6 +44,9 @@ void setup() {
     player.velocity = algebra::Vector<3>({ 0.0f, 0.0f, 0.0f });
     println("[Main] Spawned player at:", player.position[0], ",",
             player.position[1], ",", player.position[2]);
+    println("Display test complete");
+
+    // pinMode(JOYSTICK_BUTTON_PIN, INPUT_PULLUP);
 }
 
 void loop() {
@@ -63,6 +72,30 @@ void loop() {
         println("Player pos (m):", player.position[0], player.position[1],
                 player.position[2]);
         lastImuPrint = now;
+    // Disable physics; drive camera/player manually in an orbit
+    game.update(dt);
+
+    // Orbit around the world center while looking at it
+    // const Vec3 center = Vec3({ World::WIDTH * 0.5f, 1.5f, World::DEPTH * 0.5f });
+    // const float radius = 8.0f;     // circle around the 10x10 world
+    // const float height = 3.0f;     // keep above the ground
+    // const float angularSpeed = 0.4f; // radians per second
+    // const float angle = angularSpeed * (millis() / 1000.0f);
+
+    // game.player.position =
+    //     Vec3({ center[0] + cosf(angle) * radius, height,
+    //            center[2] + sinf(angle) * radius });
+    // game.player.velocity = Vec3({ 0.0f, 0.0f, 0.0f });
+    // game.player.orientation = algebra::lookAt(game.player.position, center);
+
+    // Render full world (throttled for performance)
+    static uint32_t lastRender = 0;
+    if (now - lastRender > 100) { // Render every 100ms (10 FPS)
+        if (renderer) {
+            renderer->render(game.world, game.player.position,
+                             game.player.orientation);
+        }
+        lastRender = now;
     }
 
     // Update physics and render via GameState

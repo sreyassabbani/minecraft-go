@@ -52,7 +52,8 @@ Quaternion makeYawPitch(float yaw, float pitch) {
 }
 
 Quaternion lookAt(const Vector<3>& pos, const Vector<3>& target) {
-    Vector<3> dir { target[0] - pos[0], target[1] - pos[1], target[2] - pos[2] };
+    Vector<3> dir { target[0] - pos[0], target[1] - pos[1],
+                    target[2] - pos[2] };
     const float len =
         std::sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]);
     if (len < 1e-4f) { return Quaternion { 1.0f, 0.0f, 0.0f, 0.0f }; }
@@ -60,8 +61,10 @@ Quaternion lookAt(const Vector<3>& pos, const Vector<3>& target) {
     dir[1] /= len;
     dir[2] /= len;
 
-    const float yaw = std::atan2(dir[0], dir[2]); // rotate around Y to face target
-    const float pitch = std::atan2(-dir[1], std::sqrt(dir[0] * dir[0] + dir[2] * dir[2]));
+    const float yaw =
+        std::atan2(dir[0], dir[2]); // rotate around Y to face target
+    const float pitch =
+        std::atan2(-dir[1], std::sqrt(dir[0] * dir[0] + dir[2] * dir[2]));
     return makeYawPitch(yaw, pitch);
 }
 
