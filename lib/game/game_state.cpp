@@ -9,17 +9,15 @@ GameState::GameState(Renderer& renderer, Player& player)
 }
 
 void GameState::update(float dt) {
-    render();
-
     player.updatePhysics(world, dt);
-    player.move();
+    render();
 }
 
 void GameState::render() {
     renderer.render(world, player.position, player.getOrientation());
 }
 
-static algebra::Vector<3> forwardDirection(const Player& player) {
+static algebra::Vector<3> forwardDirection(Player& player) {
     algebra::Vector<3> dir = algebra::Vector<3>({ 0.0f, 0.0f, 1.0f });
     dir = algebra::rotateVector(player.getOrientation(), dir);
     const float len =
@@ -32,9 +30,10 @@ static algebra::Vector<3> forwardDirection(const Player& player) {
     return dir;
 }
 
-bool GameState::placeStoneForward(const Player& player, float maxDist) {
+bool GameState::placeStoneForward(Player& player, float maxDist) {
     const algebra::Vector<3> origin =
-        player.position + algebra::Vector<3>({ 0.0f, player.height * 0.9f, 0.0f });
+        player.position +
+        algebra::Vector<3>({ 0.0f, player.height * 0.9f, 0.0f });
     const algebra::Vector<3> dir = forwardDirection(player);
     const float step = 0.1f;
 
@@ -51,7 +50,8 @@ bool GameState::placeStoneForward(const Player& player, float maxDist) {
         if (world.getBlock(bx, by, bz) != AIR) {
             if (hasPrev && world.inBounds(prevX, prevY, prevZ)) {
                 world.setBlock(prevX, prevY, prevZ, STONE);
-                println("[Main] Placed STONE at:", prevX, ",", prevY, ",", prevZ);
+                println("[Main] Placed STONE at:", prevX, ",", prevY, ",",
+                        prevZ);
                 return true;
             }
             return false;
@@ -65,9 +65,10 @@ bool GameState::placeStoneForward(const Player& player, float maxDist) {
     return false;
 }
 
-bool GameState::removeBlockForward(const Player& player, float maxDist) {
+bool GameState::removeBlockForward(Player& player, float maxDist) {
     const algebra::Vector<3> origin =
-        player.position + algebra::Vector<3>({ 0.0f, player.height * 0.9f, 0.0f });
+        player.position +
+        algebra::Vector<3>({ 0.0f, player.height * 0.9f, 0.0f });
     const algebra::Vector<3> dir = forwardDirection(player);
     const float step = 0.1f;
 

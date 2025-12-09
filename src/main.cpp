@@ -11,20 +11,18 @@
 using ActiveImu = Bno085Imu;
 using Vec3 = algebra::Vector<3>;
 
-// Joystick wiring: X=A6, Y=A7, sprint button=digital 53 (active-low)
-// Jump button: digital 6 (active-low)
-// Block interactions: place on digital 7 (active-low), remove on digital 8
-// (active-low)
+// Joystick wiring: X=A6, Y=A7
+// Buttons (active-low): sprint=51, jump=49, place=47, remove=45
 constexpr int kJoyXPin = A6;
 constexpr int kJoyYPin = A7;
-constexpr int kJoyButtonPin = 53;
-constexpr int kJumpButtonPin = 6;
-constexpr int kPlaceButtonPin = 7;
-constexpr int kRemoveButtonPin = 8;
+constexpr int kSprintButtonPin = 51;
+constexpr int kJumpButtonPin = 49;
+constexpr int kPlaceButtonPin = 47;
+constexpr int kRemoveButtonPin = 45;
 
-constexpr float kBaseMove = 1.0f;         // base movement scale
+constexpr float kBaseMove = 2.0f;         // base movement scale (faster)
 constexpr float kSprintMultiplier = 2.0f; // sprint speed multiplier
-constexpr int kJoyDeadzone = 50;          // ADC counts (~5%)
+constexpr int kJoyDeadzone = 120;         // ADC counts (~12%) to reduce drift
 constexpr float kBlockReach = 4.0f;       // meters to reach for place/remove
 
 // Core game objects
@@ -89,14 +87,18 @@ static void initRenderAndGame() {
     gamePtr = new GameState(*rendererPtr, player);
     println("[Main] Spawned player at:", player.position[0], ",",
             player.position[1], ",", player.position[2]);
-
-    pinMode(kJoyButtonPin, INPUT_PULLUP);
-    pinMode(kJumpButtonPin, INPUT_PULLUP);
 }
 
 static void initInput() {
-    InputPins pins { kJoyXPin,       kJoyYPin,        kJoyButtonPin,
+    InputPins pins { kJoyXPin,       kJoyYPin,        kSprintButtonPin,
                      kJumpButtonPin, kPlaceButtonPin, kRemoveButtonPin };
+
+    // Ensure all button pins use internal pull-ups for stable reads.
+    pinMode(kSprintButtonPin, INPUT_PULLUP);
+    pinMode(kJumpButtonPin, INPUT_PULLUP);
+    pinMode(kPlaceButtonPin, INPUT_PULLUP);
+    pinMode(kRemoveButtonPin, INPUT_PULLUP);
+
     inputPtr = new InputHandler(pins, kBaseMove, kSprintMultiplier,
                                 kJoyDeadzone, kBlockReach);
     inputPtr->begin();
@@ -112,7 +114,12 @@ static void logImu(uint32_t nowMs) {
     const auto euler = imu.getOrientationEuler();
     println("[Main] gravity (m/s^2):", gravity[0], gravity[1], gravity[2]);
     println("[Main] linear accel (m/s^2):", accel[0], accel[1], accel[2]);
-    println("[Main] yaw/pitch/roll (rad):", euler[0], euler[1], euler[2]);
+    println("[Main] yaw/roll/pitch (rad):", euler[0], euler[2], euler[1]);
+    println("[Main] btn 51/49/47/45:",
+            digitalRead(kSprintButtonPin), ",",
+            digitalRead(kJumpButtonPin), ",",
+            digitalRead(kPlaceButtonPin), ",",
+            digitalRead(kRemoveButtonPin));
     println("----");
     println("Player pos (m):", player.position[0], player.position[1],
             player.position[2]);

@@ -29,14 +29,15 @@ void InputHandler::update(Player& player, GameState& game, float dt) {
     const int placeBtn = digitalRead(pins_.placeBtn);
     const int removeBtn = digitalRead(pins_.removeBtn);
 
-    const float joyX = normAxis(rawX);  // strafe
-    const float joyY = -normAxis(rawY); // forward/back (invert so up=forward)
+    // Swap axes to match wiring: X pin drives forward/back, Y pin drives strafe.
+    const float joyStrafe = -normAxis(rawY);   // left/right (invert so left is negative)
+    const float joyForward = -normAxis(rawX);  // forward/back (invert so up is forward)
 
     float speed = baseSpeed_;
     if (sprintBtn == LOW) { speed *= sprintMult_; }
 
-    if (fabsf(joyY) > 0.0f) { player.moveForward(joyY * speed * dt); }
-    if (fabsf(joyX) > 0.0f) { player.moveRight(joyX * speed * dt); }
+    if (fabsf(joyForward) > 0.0f) { player.moveForward(joyForward * speed * dt); }
+    if (fabsf(joyStrafe) > 0.0f) { player.moveRight(joyStrafe * speed * dt); }
 
     if (lastJumpState_ == HIGH && jumpBtn == LOW) { player.jump(); }
     lastJumpState_ = jumpBtn;
