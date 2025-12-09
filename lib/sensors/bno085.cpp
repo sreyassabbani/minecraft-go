@@ -1,14 +1,18 @@
 #include <Wire.h>
 #include <bno085.hpp>
+#include <cmath>
 
 namespace {
 constexpr uint32_t kReportIntervalUs = 10000; // 100 Hz
 
 algebra::Quaternion invert(const algebra::Quaternion& q) {
     const float norm2 = q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z;
-    if (norm2 <= 1e-6f) { return algebra::Quaternion { 1.0f, 0.0f, 0.0f, 0.0f }; }
+    if (norm2 <= 1e-6f) {
+        return algebra::Quaternion { 1.0f, 0.0f, 0.0f, 0.0f };
+    }
     const float inv = 1.0f / norm2;
-    return algebra::Quaternion { q.w * inv, -q.x * inv, -q.y * inv, -q.z * inv };
+    return algebra::Quaternion { q.w * inv, -q.x * inv, -q.y * inv,
+                                 -q.z * inv };
 }
 
 algebra::Quaternion multiply(const algebra::Quaternion& a,
@@ -16,9 +20,30 @@ algebra::Quaternion multiply(const algebra::Quaternion& a,
     return algebra::Quaternion { a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
                                  a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
                                  a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
-                                 a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w };
+                                 a.w * b.z + a.x * b.y - a.y * b.x +
+                                     a.z * b.w };
 }
+
+algebra::Quaternion makeYawPitchRoll(float yaw, float pitch, float roll) {
+    const float halfYaw = yaw * 0.5f;
+    const float halfPitch = pitch * 0.5f;
+    const float halfRoll = roll * 0.5f;
+
+    const float cy = std::cos(halfYaw);
+    const float sy = std::sin(halfYaw);
+    const float cp = std::cos(halfPitch);
+    const float sp = std::sin(halfPitch);
+    const float cr = std::cos(halfRoll);
+    const float sr = std::sin(halfRoll);
+
+    return algebra::normalizeQuaternion(algebra::Quaternion {
+        cr * cp * cy + sr * sp * sy, // w
+        sr * cp * cy - cr * sp * sy, // x
+        cr * sp * cy + sr * cp * sy, // y
+        cr * cp * sy - sr * sp * cy  // z
+    });
 }
+} // namespace
 
 Bno085Imu::Bno085Imu() = default;
 
@@ -63,7 +88,8 @@ void Bno085Imu::begin() {
     }
 
     if (!initialized) {
-        println("[BNO] Neither address responded on Wire; check wiring/ADR pin/3V3 power");
+        println("[BNO] Neither address responded on Wire; check wiring/ADR "
+                "pin/3V3 power");
         return;
     }
 
@@ -103,6 +129,10 @@ void Bno085Imu::update() {
             const auto& r = sensorValue.un.gameRotationVector;
             q = algebra::normalizeQuaternion(
                 algebra::Quaternion { r.real, r.i, r.j, r.k });
+            println("[BNO] Got orientation event #: ", eventCount, " q:", q.w,
+                    q.x, q.y, q.z);
+            auto ea = algebra::quaternionToEuler(q);
+            println("[BNO] Euler (rad): ", ea[0], ", ", ea[1], ", ", ea[2]);
             if (!referenceSet) {
                 reference = q;
                 referenceSet = true;
@@ -125,10 +155,9 @@ void Bno085Imu::update() {
         }
 
         if (eventCount <= 5) {
-            println("[BNO] Event ", sensorValue.sensorId,
-                    " | q:", q.w, q.x, q.y, q.z, " | g:", gravity[0],
-                    gravity[1], gravity[2], " | la:", linearAccel[0],
-                    linearAccel[1], linearAccel[2]);
+            println("[BNO] Event ", sensorValue.sensorId, " | q:", q.w, q.x,
+                    q.y, q.z, " | g:", gravity[0], gravity[1], gravity[2],
+                    " | la:", linearAccel[0], linearAccel[1], linearAccel[2]);
         }
     }
 
@@ -149,14 +178,43 @@ algebra::Vector<3> Bno085Imu::getLinearAcceleration() const {
 algebra::Vector<3> Bno085Imu::getGravityVector() const { return gravity; }
 
 algebra::Vector<3> Bno085Imu::getOrientationEuler() const {
-    return algebra::quaternionToEuler(q);
+    auto a = algebra::quaternionToEuler(q);
+
+    // return { a[2], a[1], a[0] };
+    return { a[0], a[1], a[2] };
 }
 
 algebra::Quaternion
 Bno085Imu::getOrientation(const algebra::Quaternion& current) const {
     (void)current;
-    if (!referenceSet) return q;
-    return algebra::normalizeQuaternion(multiply(q, invert(reference)));
+    const algebra::Quaternion relative =
+        referenceSet
+            ? algebra::normalizeQuaternion(multiply(q, invert(reference)))
+            : q;
+
+    // Remap axes: original pitch appeared on roll and inverted; map so that
+    // pitch (from sensor roll slot) drives yaw, yaw drives pitch, and roll
+    // passes through.
+    const algebra::Vector<3> euler = algebra::quaternionToEuler(relative);
+    float yaw = euler[2];         // sensor pitch -> world yaw (invert)
+    const float pitch = euler[0]; // sensor yaw -> world pitch
+    float roll = euler[1];        // sensor roll -> world roll
+
+    // Invert yaw and roll directions to match desired motion.
+    yaw = -yaw;
+    roll = -roll;
+    return makeYawPitchRoll(yaw, pitch, roll);
+}
+
+void Bno085Imu::calibrateToCurrent() {
+    if (!initialized) return;
+    if (eventCount == 0) {
+        println("[BNO] Cannot calibrate: no orientation samples yet");
+        return;
+    }
+    reference = q;
+    referenceSet = true;
+    println("[BNO] Orientation calibrated to current pose");
 }
 
 algebra::Vector<3> Bno085Imu::getPosition() const { return position; }

@@ -89,6 +89,9 @@ static void initRenderAndGame() {
     gamePtr = new GameState(*rendererPtr, player);
     println("[Main] Spawned player at:", player.position[0], ",",
             player.position[1], ",", player.position[2]);
+
+    pinMode(kJoyButtonPin, INPUT_PULLUP);
+    pinMode(kJumpButtonPin, INPUT_PULLUP);
 }
 
 static void initInput() {

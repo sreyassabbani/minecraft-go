@@ -6,10 +6,13 @@ Renderer::Renderer(display::Display& disp) : display(disp) {}
 
 void Renderer::render(const World& world, const Vec3& camPos,
                       const algebra::Quaternion& camOrientation) {
+    // Invert orientation for renderer to match expected camera motion
+    const algebra::Quaternion camOrientationInv { camOrientation.w, -camOrientation.x,
+                                                  -camOrientation.y, -camOrientation.z };
+
     // Derive camera basis from player orientation so view follows head pose
-    Vec3 forward =
-        algebra::rotateVector(camOrientation, Vec3({ 0.0f, 0.0f, 1.0f }));
-    Vec3 up = algebra::rotateVector(camOrientation, Vec3({ 0.0f, 1.0f, 0.0f }));
+    Vec3 forward = algebra::rotateVector(camOrientationInv, Vec3({ 0.0f, 0.0f, 1.0f }));
+    Vec3 up = algebra::rotateVector(camOrientationInv, Vec3({ 0.0f, 1.0f, 0.0f }));
 
     forward = algebra::normalizeOr(forward, Vec3({ 0.0f, 0.0f, 1.0f }));
     up = algebra::normalizeOr(up, Vec3({ 0.0f, 1.0f, 0.0f }));
