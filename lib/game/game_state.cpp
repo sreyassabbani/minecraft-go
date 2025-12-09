@@ -7,7 +7,6 @@ GameState::GameState(Renderer& renderer, Player& player)
 
 void GameState::update(float dt) {
     player.updatePhysics(world, dt);
-    player.move();
     render();
 }
 
