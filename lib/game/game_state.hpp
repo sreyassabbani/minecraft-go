@@ -14,4 +14,8 @@ public:
 
     void update(float dt);
     void render();
+
+    // Forward-facing interactions
+    bool placeStoneForward(const Player& player, float maxDist);
+    bool removeBlockForward(const Player& player, float maxDist);
 };

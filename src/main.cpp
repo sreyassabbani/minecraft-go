@@ -7,10 +7,17 @@
 #include <renderer.hpp>
 
 #include <bno085.hpp>
-
 using ActiveImu = Bno085Imu;
-using Vec3 = algebra::Vector<3>;
-using display::screen;
+
+// Joystick wiring: X=A6, Y=A7, sprint button=digital 53 (active-low)
+// Jump button: digital 6 (active-low)
+constexpr int kJoyXPin = A6;
+constexpr int kJoyYPin = A7;
+constexpr int kJoyButtonPin = 53;
+constexpr int kJumpButtonPin = 6;
+constexpr int kJoyDeadzone = 50;          // ADC counts (~5%)
+constexpr float kBaseMove = 1.0f;         // base movement scale
+constexpr float kSprintMultiplier = 2.0f; // sprint speed multiplier
 
 ActiveImu imu;
 Player player(&imu);
@@ -30,7 +37,9 @@ void setup() {
                 "zero pose");
     }
 
-    if (!displayPtr) displayPtr = &display::screen(); // init display hardware
+    if (!displayPtr) {
+        displayPtr = &display::screen(); // initialize display hardware now
+    }
     println("[Main] Display dimensions:", displayPtr->width(), "x",
             displayPtr->height());
 
@@ -38,10 +47,14 @@ void setup() {
     gamePtr = new GameState(*rendererPtr, player);
 
     // Place player near world center at a safe height on the floor
-    player.position = Vec3({ 3.0f, 5.05f, 4.0f });
-    player.velocity = Vec3({ 0.0f, 0.0f, 0.0f });
+    player.position =
+        algebra::Vector<3>({ World::WIDTH * 0.5f, 2.2f, World::DEPTH * 0.5f });
+    player.velocity = algebra::Vector<3>({ 0.0f, 0.0f, 0.0f });
     println("[Main] Spawned player at:", player.position[0], ",",
             player.position[1], ",", player.position[2]);
+
+    pinMode(kJoyButtonPin, INPUT_PULLUP);
+    pinMode(kJumpButtonPin, INPUT_PULLUP);
 }
 
 void loop() {
