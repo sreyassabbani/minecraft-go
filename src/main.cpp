@@ -1,4 +1,6 @@
 #include <Arduino.h>
+#include <math.h>
+
 #include <display.hpp>
 #include <game_state.hpp>
 #include <general.hpp>
@@ -52,6 +54,35 @@ void loop() {
 
     imu.update();
 
+    // Joystick input
+    const int rawX = analogRead(kJoyXPin);
+    const int rawY = analogRead(kJoyYPin);
+    const int sprintBtn = digitalRead(kJoyButtonPin);
+    const int jumpBtn = digitalRead(kJumpButtonPin);
+
+    auto normAxis = [](int raw) {
+        // Map 0-1023 to roughly -1..+1 with a deadzone around center
+        const int centered = raw - 512;
+        if (abs(centered) < kJoyDeadzone) return 0.0f;
+        return static_cast<float>(centered) / 512.0f;
+    };
+
+    const float joyX = normAxis(rawX);  // strafe
+    const float joyY = -normAxis(rawY); // forward/back (invert so up=forward)
+
+    float speed = kBaseMove;
+    if (sprintBtn == LOW) { speed *= kSprintMultiplier; }
+
+    if (fabsf(joyY) > 0.0f) { player.moveForward(joyY * speed * dt); }
+    if (fabsf(joyX) > 0.0f) { player.moveRight(joyX * speed * dt); }
+
+    static int lastJumpState = HIGH;
+    if (lastJumpState == HIGH && jumpBtn == LOW) { player.jump(); }
+    lastJumpState = jumpBtn;
+
+    // Update physics and render via GameState every frame
+    if (rendererPtr && gamePtr) { gamePtr->update(dt); }
+
     // Periodic IMU debug
     static uint32_t lastImuPrint = 0;
     if (imu.isInitialized() && now - lastImuPrint > 200) {
@@ -66,7 +97,4 @@ void loop() {
                 player.position[2]);
         lastImuPrint = now;
     }
-
-    // Update physics and render via GameState
-    if (rendererPtr && gamePtr) { gamePtr->update(dt); }
 }

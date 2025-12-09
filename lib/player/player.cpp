@@ -1,4 +1,5 @@
 #include <math.h>
+#include <algorithm>
 #include <player.hpp>
 #include <general.hpp>
 #include <Arduino.h>
@@ -57,7 +58,7 @@ void Player::moveForward(float amount) {
         forward[2] /= len;
     }
 
-    position = position + forward * (amount * 0.1f); // Scale movement
+    position = position + forward * amount;
 }
 
 void Player::moveRight(float amount) {
@@ -74,9 +75,7 @@ void Player::moveRight(float amount) {
         right[2] /= len;
     }
 
-    println("Moving right by amount: ", String(amount));
-
-    position = position + right * (amount * 0.1f);
+    position = position + right * amount;
 }
 
 void Player::move() {
@@ -154,7 +153,7 @@ void Player::updatePhysics(World& world, float dt) {
     if (checkCollision(world, nextPos)) {
         if (velocity[1] < 0.0f) {
             // Snap to just above the block we hit to avoid sinking
-            position[1] = std::max(0.0f, floorf(position[1]) + 0.001f);
+            position[1] = (std::max)(0.0f, floorf(position[1]) + 0.001f);
         }
         velocity[1] = 0;
     } else {
