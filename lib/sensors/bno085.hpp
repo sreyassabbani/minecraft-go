@@ -22,6 +22,7 @@ public:
     getOrientation(const algebra::Quaternion& current) const override;
     algebra::Vector<3> getPosition() const override;
     algebra::Vector<3> getVelocity() const override;
+    void calibrateToCurrent() override;
     bool hasOrientation() const override {
         return initialized && eventCount > 0 && referenceSet;
     }

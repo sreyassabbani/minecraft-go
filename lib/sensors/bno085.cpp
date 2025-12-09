@@ -206,6 +206,17 @@ Bno085Imu::getOrientation(const algebra::Quaternion& current) const {
     return makeYawPitchRoll(yaw, pitch, roll);
 }
 
+void Bno085Imu::calibrateToCurrent() {
+    if (!initialized) return;
+    if (eventCount == 0) {
+        println("[BNO] Cannot calibrate: no orientation samples yet");
+        return;
+    }
+    reference = q;
+    referenceSet = true;
+    println("[BNO] Orientation calibrated to current pose");
+}
+
 algebra::Vector<3> Bno085Imu::getPosition() const { return position; }
 
 algebra::Vector<3> Bno085Imu::getVelocity() const { return velocity; }

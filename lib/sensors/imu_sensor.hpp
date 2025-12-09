@@ -21,4 +21,7 @@ public:
     // Optional hint for consumers that only want to override orientation when
     // the IMU has delivered a valid estimate.
     virtual bool hasOrientation() const { return true; }
+
+    // Optional: recalibrate reference to the current pose.
+    virtual void calibrateToCurrent() {}
 };
