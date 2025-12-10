@@ -28,6 +28,7 @@ private:
     int deadzone_;
     float reach_;
 
+    int lastSprintState_;
     int lastJumpState_;
     int lastPlaceState_;
     int lastRemoveState_;

@@ -33,9 +33,9 @@ algebra::Quaternion Player::getOrientation() {
 
 void Player::jump() {
     // Simple jump, assuming on ground check is done elsewhere or allowed to air
-    // jump for now For better physics, check if on ground. For this step, let's
-    // just add upward velocity.
-    velocity[1] = 5.0f;
+    // jump for now. Explicitly bump Y to satisfy the requested jump height.
+    position[1] += 5.0f;
+    velocity[1] = 0.0f;
 }
 
 void Player::moveForward(float amount) {

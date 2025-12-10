@@ -5,7 +5,8 @@
 InputHandler::InputHandler(InputPins pins, float baseSpeed, float sprintMult,
                            int deadzone, float reach)
     : pins_(pins), baseSpeed_(baseSpeed), sprintMult_(sprintMult),
-      deadzone_(deadzone), reach_(reach), lastJumpState_(HIGH),
+      deadzone_(deadzone), reach_(reach), lastSprintState_(HIGH),
+      lastJumpState_(HIGH),
       lastPlaceState_(HIGH), lastRemoveState_(HIGH) {}
 
 void InputHandler::begin() const {
@@ -29,6 +30,19 @@ void InputHandler::update(Player& player, GameState& game, float dt) {
     const int placeBtn = digitalRead(pins_.placeBtn);
     const int removeBtn = digitalRead(pins_.removeBtn);
 
+    if (lastSprintState_ == HIGH && sprintBtn == LOW) {
+        println("[Input] Sprint pressed");
+    }
+    if (lastJumpState_ == HIGH && jumpBtn == LOW) {
+        println("[Input] Jump pressed");
+    }
+    if (lastPlaceState_ == HIGH && placeBtn == LOW) {
+        println("[Input] Place pressed");
+    }
+    if (lastRemoveState_ == HIGH && removeBtn == LOW) {
+        println("[Input] Destroy pressed");
+    }
+
     // Swap axes to match wiring: X pin drives forward/back, Y pin drives strafe.
     const float joyStrafe = -normAxis(rawY);   // left/right (invert so left is negative)
     const float joyForward = -normAxis(rawX);  // forward/back (invert so up is forward)
@@ -51,4 +65,5 @@ void InputHandler::update(Player& player, GameState& game, float dt) {
         game.removeBlockForward(player, reach_);
     }
     lastRemoveState_ = removeBtn;
+    lastSprintState_ = sprintBtn;
 }

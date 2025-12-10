@@ -22,8 +22,8 @@ constexpr int kRemoveButtonPin = 45;
 
 constexpr float kBaseMove = 2.0f;         // base movement scale (faster)
 constexpr float kSprintMultiplier = 2.0f; // sprint speed multiplier
-constexpr int kJoyDeadzone = 120;         // ADC counts (~12%) to reduce drift
-constexpr float kBlockReach = 4.0f;       // meters to reach for place/remove
+constexpr int kJoyDeadzone = 200;         // ADC counts (~20%) to reduce drift
+constexpr float kBlockReach = 1.0f;       // interact with adjacent block only
 
 // Core game objects
 ActiveImu imu;
@@ -39,6 +39,8 @@ static void initPlayer();
 static void initRenderAndGame();
 static void initInput();
 static void logImu(uint32_t nowMs);
+static void drawStartMenu();
+static void dismissStartMenu();
 
 void setup() {
     Serial.begin(115200);
@@ -58,6 +60,39 @@ void loop() {
     if (dt > 0.1f) dt = 0.1f; // clamp large pauses
 
     imu.update();
+
+    // Show a simple start menu while IMU is calibrating/zeroing and keep it
+    // up for at least 5 seconds total (even if IMU finishes early).
+    static bool startMenuActive = true;
+    static bool startMenuDrawn = false;
+    static bool startMenuFinished = false;
+    static uint32_t startMenuStartMs = 0;
+    const uint32_t kMinMenuMs = 5000;
+
+    const bool imuReady = imu.hasOrientation();
+    if (!startMenuFinished && !startMenuDrawn && displayPtr) {
+        drawStartMenu(); // draw once
+        startMenuDrawn = true;
+        startMenuStartMs = nowMs;
+    }
+
+    if (!imuReady) {
+        startMenuActive = true;
+        return; // wait until IMU ready
+    }
+
+    // IMU ready; keep menu up for the minimum duration
+    if (startMenuActive && !startMenuFinished) {
+        if (nowMs - startMenuStartMs >= kMinMenuMs) {
+            dismissStartMenu();
+            startMenuActive = false;
+            startMenuDrawn = false;
+            startMenuStartMs = 0;
+            startMenuFinished = true;
+        } else {
+            return;
+        }
+    }
 
     if (inputPtr && gamePtr) { inputPtr->update(player, *gamePtr, dt); }
     if (rendererPtr && gamePtr) { gamePtr->update(dt); }
@@ -124,4 +159,49 @@ static void logImu(uint32_t nowMs) {
     println("Player pos (m):", player.position[0], player.position[1],
             player.position[2]);
     lastImuPrint = nowMs;
+}
+
+static void drawStartMenu() {
+    if (!displayPtr) return;
+    displayPtr->clear(display::Color::Black());
+    const int16_t cx = displayPtr->width() / 2;
+    const int16_t cy = displayPtr->height() / 2;
+    displayPtr->drawTextCentered(cx, cy - 36, "Minecraft Go",
+                                 display::TextStyle(display::Color::Green(),
+                                                    display::Color::Black(), 2));
+    displayPtr->drawTextCentered(cx, cy - 12, "Calibrating IMU...",
+                                 display::TextStyle(display::Color::White(),
+                                                    display::Color::Black(), 1));
+    displayPtr->drawTextCentered(cx, cy + 4, "Hold still",
+                                 display::TextStyle(display::Color::Gray(),
+                                                    display::Color::Black(), 1));
+
+    // Controls
+    const int16_t left = cx - 90;
+    const int16_t top = cy + 24;
+    displayPtr->drawText(left, top, "Controls:",
+                         display::TextStyle(display::Color::White(),
+                                            display::Color::Black(), 1));
+    displayPtr->drawText(left, top + 12, "Btn 1 (Red): Destroy",
+                         display::TextStyle(display::Color::Red(),
+                                            display::Color::Black(), 1));
+    displayPtr->drawText(left, top + 24, "Btn 2 (Blue): Place",
+                         display::TextStyle(display::Color::Blue(),
+                                            display::Color::Black(), 1));
+    displayPtr->drawText(left, top + 36, "Btn 3 (Yellow): Jump",
+                         display::TextStyle(display::Color::fromRGB(255, 215, 0),
+                                            display::Color::Black(), 1));
+    displayPtr->drawText(left, top + 52,
+                         "Joystick: Up/Down=Forward/Back",
+                         display::TextStyle(display::Color::White(),
+                                            display::Color::Black(), 1));
+    displayPtr->drawText(left, top + 64,
+                         "          Left/Right=Strafe",
+                         display::TextStyle(display::Color::White(),
+                                            display::Color::Black(), 1));
+}
+
+static void dismissStartMenu() {
+    if (!displayPtr) return;
+    displayPtr->clear(display::Color::SkyBlue());
 }
