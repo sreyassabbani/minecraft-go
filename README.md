@@ -6,11 +6,7 @@ The goal of this project is to explore how far we can push LCD voxel rendering o
 
 ## Game Mechanics
 
-Instead of a traditional game controller, gameplay is driven by several physical sensors:
-
-- inertial measurement unit (IMU)
-- photoresistor
-- thermistor
+Instead of a traditional game controller, the user looks around by tilting and moving the handheld console. The orientation is detected using an IMU (Intertial Measurement Unit).
 
 ---
 
@@ -21,6 +17,3 @@ Instead of a traditional game controller, gameplay is driven by several physical
 ### Render Pipeline
 
 ### Game Engine
-
-> [!CAUTION]
-> **TODO**
